@@ -21,7 +21,7 @@
     "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up --build",
     "docker:prod": "docker-compose -f docker/docker-compose.prod.yml up --build -d",
     "docker:down": "docker-compose -f docker/docker-compose.dev.yml down -v",
-    "indexes:create": "tsx scripts/create-indexes.ts",
+    "create-indexes": "tsx scripts/create-indexes.ts",
     "seed:dev": "tsx scripts/seed-dev.ts"
   },
   "keywords": [
@@ -34,7 +34,7 @@
     "redis",
     "typescript"
   ],
-  "author": "Staff+ Engineer",
+  "author": "Bruno Paulon",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

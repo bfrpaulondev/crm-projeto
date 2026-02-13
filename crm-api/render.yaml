@@ -1,6 +1,11 @@
 # Render Blueprint for CRM Pipeline API
 # This file configures automatic deployment on Render
 # https://render.com/docs/blueprint-spec
+#
+# IMPORTANT: This configuration uses external services:
+# - MongoDB Atlas (free tier)
+# - Upstash Redis (free tier)
+# Set the environment variables manually in Render Dashboard
 
 services:
   # ===========================================================================
@@ -9,47 +14,52 @@ services:
   - type: web
     name: crm-api
     runtime: node
-    region: oregon # Change to your preferred region
-    plan: free # Change to starter/pro for production
+    region: oregon
+    plan: free
     branch: main
     buildCommand: npm install && npm run build
-    startCommand: npm run start
+    startCommand: npm start
     healthCheckPath: /health
 
-    # Environment variables
+    # Scaling for free tier
+    numInstances: 1
+
+    # Environment variables - SET THESE IN RENDER DASHBOARD
     envVars:
       - key: NODE_ENV
         value: production
 
       - key: PORT
-        value: 4000
+        value: 10000
 
+      # MongoDB Atlas - SET MANUALLY
       - key: MONGODB_URI
-        fromDatabase:
-          name: crm-mongodb
-          property: connectionString
+        sync: false
 
       - key: MONGODB_DB_NAME
         value: crm_api
 
-      - key: REDIS_URL
-        fromService:
-          name: crm-redis
-          type: pserv
-          property: connectionString
+      # Upstash Redis - SET MANUALLY
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
 
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
+      # JWT Secrets - GENERATE IN DASHBOARD
       - key: JWT_SECRET
-        generateValue: true # Auto-generates a secure secret
-
-      - key: JWT_EXPIRES_IN
-        value: 15m
+        generateValue: true
 
       - key: JWT_REFRESH_SECRET
         generateValue: true
 
+      - key: JWT_EXPIRES_IN
+        value: 15m
+
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
 
+      # Security
       - key: RATE_LIMIT_WINDOW_MS
         value: 60000
 
@@ -62,67 +72,47 @@ services:
       - key: GRAPHQL_COMPLEXITY_LIMIT
         value: 1000
 
+      # Disable introspection in production
       - key: INTROSPECTION_ENABLED
         value: false
 
       - key: PLAYGROUND_ENABLED
         value: false
 
+      # Logging
       - key: LOG_LEVEL
         value: info
 
       - key: LOG_FORMAT
         value: json
 
-      # CORS - IMPORTANT: Configure your frontend URLs
+      # CORS - SET YOUR FRONTEND URL
       - key: CORS_ORIGINS
-        value: https://your-frontend.vercel.app,https://your-domain.com
+        value: "*"
 
-      # Email configuration (optional)
-      - key: EMAIL_PROVIDER
-        value: console
-
-      # Storage configuration
+      # Storage (local for free tier)
       - key: STORAGE_TYPE
-        value: s3
-
-      # Uncomment and configure for AWS S3
-      # - key: AWS_S3_BUCKET
-      #   value: your-bucket-name
-      # - key: AWS_REGION
-      #   value: us-east-1
-      # - key: AWS_ACCESS_KEY_ID
-      #   sync: false # Set manually in dashboard
-      # - key: AWS_SECRET_ACCESS_KEY
-      #   sync: false # Set manually in dashboard
-
-  # ===========================================================================
-  # Redis - Private instance
-  # ===========================================================================
-  - type: pserv
-    name: crm-redis
-    runtime: docker
-    region: oregon
-    plan: free # Change to starter for production
-    dockerfilePath: ./docker/Dockerfile.redis
-    dockerContext: ./docker
-    envVars:
-      - key: REDIS_MAXMEMORY
-        value: 50mb
+        value: local
 
 # ===========================================================================
-# MongoDB - Using Render's managed MongoDB
-# ===========================================================================
-databases:
-  - name: crm-mongodb
-    region: oregon
-    plan: free # Change to starter/pro for production
-    databaseName: crm_api
-
-# ===========================================================================
-# Notes:
-# - Free tier has limitations: 750 hours/month, sleeps after inactivity
-# - For production, upgrade to Starter plan ($7/month)
-# - Configure CORS_ORIGINS with your actual frontend URLs
-# - Set AWS credentials manually in Render dashboard for S3 storage
+# SETUP INSTRUCTIONS:
+#
+# 1. Go to Render Dashboard > New > Blueprint
+# 2. Connect your GitHub repository
+# 3. Select this blueprint file
+# 4. Set these environment variables manually:
+#
+#    MONGODB_URI:
+#      mongodb+srv://bfrpaulondev_db_user:fejwbKAe6t6QlPYg@cluster0.cy4nwmv.mongodb.net/crm_api?retryWrites=true&w=majority
+#
+#    UPSTASH_REDIS_REST_URL:
+#      https://summary-coyote-40506.upstash.io
+#
+#    UPSTASH_REDIS_REST_TOKEN:
+#      AZ46AAIncDIxN2Y4NTVhMGFiZDk0OTQ0YTZmOGNmODUwNTE2OWYzOXAyNDA1MDY
+#
+# 5. CORS_ORIGINS: Set to your frontend URL (e.g., https://myapp.vercel.app)
+#    Use "*" only for development/testing
+#
+# 6. Deploy!
 # ===========================================================================

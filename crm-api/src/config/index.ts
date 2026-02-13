@@ -10,15 +10,23 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   PORT: z.string().transform(Number).default('4000'),
   API_VERSION: z.string().default('1.0.0'),
+  RENDER: z.string().optional(), // Set by Render automatically
 
   // MongoDB
-  MONGODB_URI: z.string().url(),
+  MONGODB_URI: z.string(),
   MONGODB_DB_NAME: z.string().default('crm_api'),
   MONGODB_POOL_SIZE: z.string().transform(Number).default('10'),
 
-  // Redis
-  REDIS_URL: z.string().url(),
+  // Redis - Traditional URL
+  REDIS_URL: z.string().optional(),
   REDIS_PREFIX: z.string().default('crm:'),
+
+  // Redis - Upstash (REST API)
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+  // CORS
+  CORS_ORIGINS: z.string().default('*'),
 
   // JWT
   JWT_SECRET: z.string().min(32),
@@ -81,3 +89,11 @@ export type Config = typeof config;
 export const isProduction = config.NODE_ENV === 'production';
 export const isDevelopment = config.NODE_ENV === 'development';
 export const isTest = config.NODE_ENV === 'test';
+
+// Upstash Redis helper
+export const useUpstash = !!(config.UPSTASH_REDIS_REST_URL && config.UPSTASH_REDIS_REST_TOKEN);
+
+// CORS origins as array
+export const corsOrigins = config.CORS_ORIGINS === '*'
+  ? '*'
+  : config.CORS_ORIGINS.split(',').map(origin => origin.trim());

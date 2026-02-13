@@ -1,322 +1,319 @@
 # CRM Pipeline API
 
-A production-ready GraphQL API for CRM + Pipeline management, built with Node.js, TypeScript, MongoDB, and Redis.
+API GraphQL completa para gerenciamento de CRM e Pipeline de Vendas, construída com foco em performance, segurança e escalabilidade.
 
-## 🚀 Features
+## Stack Tecnológica
 
-- **GraphQL API** - Apollo Server v4 with Pothos schema builder
-- **Multi-tenancy** - Complete tenant isolation at data layer
-- **Authentication** - JWT with refresh tokens, password reset
-- **Authorization** - RBAC with 4 roles and 20+ permissions
-- **Pipeline Management** - Configurable stages per tenant
-- **Lead Lifecycle** - Create → Qualify → Convert workflow
-- **Real-time Analytics** - Pipeline, revenue, team performance
-- **Bulk Operations** - Import, export, bulk update
-- **File Upload** - S3 or local storage support
-- **Webhooks** - Event notifications with retry logic
-- **Email Integration** - SendGrid, SES, or Resend support
-- **Observability** - OpenTelemetry tracing, structured logging
-- **Rate Limiting** - Redis-based with sliding window
+- **Node.js 20+** com TypeScript
+- **Apollo Server 4** - Servidor GraphQL
+- **Pothos** - Schema-first GraphQL builder
+- **MongoDB Atlas** - Banco de dados NoSQL cloud
+- **Upstash Redis** - Cache e rate limiting serverless
+- **JWT** - Autenticação com access/refresh tokens
+- **OpenTelemetry** - Observabilidade e tracing
+- **Pino** - Logging estruturado
 
-## 📦 Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Runtime | Node.js 20+ |
-| Language | TypeScript 5.3+ |
-| API | Apollo Server 4 + Pothos |
-| Database | MongoDB 7.0 |
-| Cache | Redis 7.2 |
-| Validation | Zod |
-| Logging | Pino |
-| Tracing | OpenTelemetry |
-
-## 🏃 Quick Start
-
-```bash
-# Clone and install
-git clone <repo-url>
-cd crm-api
-npm install
-
-# Configure environment
-cp .env.example .env
-
-# Start infrastructure (MongoDB, Redis)
-npm run docker:dev
-
-# Create database indexes
-npm run indexes:create
-
-# Start development server
-npm run dev
-```
-
-## 📍 API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `/graphql` | GraphQL endpoint |
-| `/health` | Full health check |
-| `/ready` | Readiness check |
-| `/live` | Liveness check |
-
-## 🚢 Deploy to Render
-
-### Prerequisites
-
-1. Create a [Render account](https://render.com)
-2. Have a GitHub repository with this code
-
-### Step 1: Fork/Clone to GitHub
-
-```bash
-# Push to your GitHub account
-git remote add origin https://github.com/YOUR_USERNAME/crm-api.git
-git push -u origin main
-```
-
-### Step 2: Create New Blueprint Instance
-
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **New** → **Blueprint**
-3. Connect your GitHub repository
-4. Render will detect the `render.yaml` file
-
-### Step 3: Configure Environment Variables
-
-In the Render dashboard, update these variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `CORS_ORIGINS` | Your frontend URLs | `https://myapp.vercel.app,https://myapp.com` |
-| `JWT_SECRET` | JWT signing secret | Auto-generated, or set your own (32+ chars) |
-| `JWT_REFRESH_SECRET` | Refresh token secret | Auto-generated |
-
-### Step 4: Deploy
-
-Click **Apply** and Render will:
-1. Create a MongoDB database
-2. Create a Redis instance
-3. Deploy the API
-4. Provide a URL like `https://crm-api.onrender.com`
-
-### Step 5: Create Indexes
-
-After first deploy, run the index creation script:
-
-```bash
-# Connect to your Render web service shell
-# Then run:
-npm run indexes:create
-```
-
-Or use the Render shell:
-```bash
-render ssh crm-api
-npm run indexes:create
-```
-
-## ⚙️ Configuration Checklist
-
-Before going to production, update these in Render:
-
-### Required Changes
-
-- [ ] **CORS_ORIGINS**: Add your frontend domains
-- [ ] **JWT_SECRET**: Should be auto-generated, verify it exists
-- [ ] **JWT_REFRESH_SECRET**: Should be auto-generated, verify it exists
-
-### Optional Changes
-
-- [ ] **EMAIL_PROVIDER**: Set to `sendgrid`, `ses`, or `resend`
-- [ ] **SENDGRID_API_KEY** or **RESEND_API_KEY**: For email sending
-- [ ] **STORAGE_TYPE**: Set to `s3` for production file uploads
-- [ ] **AWS_S3_BUCKET**: Your S3 bucket name
-- [ ] **AWS_ACCESS_KEY_ID**: AWS credentials
-- [ ] **AWS_SECRET_ACCESS_KEY**: AWS credentials
-
-### Rate Limits (adjust if needed)
-
-- [ ] `RATE_LIMIT_MAX_REQUESTS`: Default 100/min
-- [ ] `GRAPHQL_DEPTH_LIMIT`: Default 10
-- [ ] `GRAPHQL_COMPLEXITY_LIMIT`: Default 1000
-
-## 🔧 Local Development
-
-### Using Docker (Recommended)
-
-```bash
-# Start all services
-npm run docker:dev
-
-# The API will be available at http://localhost:4000
-```
-
-### Without Docker
-
-You need MongoDB and Redis installed locally:
-
-```bash
-# Start MongoDB (macOS)
-brew services start mongodb-community
-
-# Start Redis (macOS)
-brew services start redis
-
-# Start API
-npm run dev
-```
-
-### Database Operations
-
-```bash
-# Create indexes
-npm run indexes:create
-
-# Seed test data
-npm run seed:dev
-```
-
-## 🧪 Testing
-
-```bash
-# All tests
-npm test
-
-# Unit tests only
-npm run test:unit
-
-# Integration tests (requires MongoDB)
-npm run test:integration
-
-# Contract tests
-npm run test:contract
-
-# Coverage report
-npm run test:coverage
-```
-
-## 📁 Project Structure
+## Arquitetura
 
 ```
 src/
-├── config/           # Environment configuration
+├── config/              # Configurações e variáveis de ambiente
+├── infrastructure/      # Conexões com MongoDB, Redis, Logger, OpenTelemetry
+├── types/               # Interfaces, tipos e validações Zod
 ├── graphql/
-│   ├── schema/       # Pothos schema definitions
-│   └── resolvers/    # Query and mutation resolvers
-├── infrastructure/   # MongoDB, Redis, logging, OTEL
-├── middlewares/      # Auth, rate limiting
-├── repositories/     # Data access layer
-├── services/         # Business logic
-├── types/            # TypeScript types and Zod schemas
-└── __tests__/        # Test files
+│   ├── schema/          # Schema GraphQL com Pothos
+│   ├── resolvers/       # Queries e Mutations
+│   └── dataloaders.ts   # DataLoaders para N+1 prevention
+├── repositories/        # Camada de acesso a dados
+├── services/            # Lógica de negócio
+├── middlewares/         # Auth, rate limiting, CORS
+└── __tests__/           # Testes unitários, integração e contrato
 ```
 
-## 📖 API Documentation
+## Funcionalidades
 
-- [Overview](./docs/01-overview.md) - Architecture and design
-- [Setup](./docs/02-setup.md) - Development setup
-- [Authentication](./docs/03-auth.md) - Auth flow
-- [API Reference](./docs/05-api-reference.md) - GraphQL operations
-- [Cookbook](./docs/06-cookbook.md) - Common workflows
+### Gestão de Entidades
+- **Leads**: Criação, qualificação, conversão para oportunidades
+- **Contas**: Empresas/clientes
+- **Contatos**: Pessoas vinculadas às contas
+- **Oportunidades**: Pipeline de vendas com estágios
+- **Atividades**: Tarefas, calls, meetings, emails
+- **Notas**: Anotações em entidades
 
-## 🔒 Security Features
+### Segurança
+- Autenticação JWT com refresh tokens
+- Rate limiting com sliding window
+- RBAC (Role-Based Access Control)
+- Multi-tenancy isolado por tenantId
+- Input sanitization e validação Zod
+- Audit logging (append-only)
 
-- JWT access + refresh tokens
-- Token revocation via Redis
-- Rate limiting per IP/user
-- Query depth/complexity limits
-- Input validation with Zod
-- Soft delete for data recovery
-- Audit logging
-- CORS configuration
-- Introspection disabled in production
+### Performance
+- DataLoader para N+1 prevention
+- Cursor-based pagination (Relay-style)
+- Índices otimizados no MongoDB
+- Cache Redis para queries frequentes
+- Persisted Queries (APQ)
 
-## 💰 Render Pricing
+### Observabilidade
+- Structured logging (Pino)
+- Distributed tracing (OpenTelemetry + Jaeger)
+- Health checks
+- Metrics endpoint
 
-| Plan | Price | Resources |
-|------|-------|-----------|
-| Free | $0 | 750 hours/month, sleeps after inactivity |
-| Starter | $7/month | Always on, more resources |
-| Pro | $25/month | Production workloads |
+## Quick Start
 
-**Note**: Free tier is good for testing, but for production use Starter or Pro.
+### Pré-requisitos
+- Node.js 20+
+- MongoDB Atlas (já configurado)
+- Upstash Redis (já configurado)
 
-## 🌐 Frontend Integration
+### Instalação
 
-### React/Next.js Example
+```bash
+# Clone o repositório
+git clone https://github.com/bfrpaulondev/crm-api.git
+cd crm-api
 
-```typescript
-import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
-import { setContext } from '@apollo/client/link/context';
+# Instale as dependências
+npm install
 
-const httpLink = createHttpLink({
-  uri: 'https://your-api.onrender.com/graphql',
-});
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas configurações
 
-const authLink = setContext((_, { headers }) => {
-  const token = localStorage.getItem('accessToken');
-  return {
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : '',
-    },
-  };
-});
+# Crie os índices do MongoDB (primeira vez apenas)
+npm run create-indexes
 
-export const client = new ApolloClient({
-  link: authLink.concat(httpLink),
-  cache: new InMemoryCache(),
-});
+# Inicie em desenvolvimento
+npm run dev
 ```
 
-### Important: CORS
+## Deploy no Render
 
-Make sure `CORS_ORIGINS` includes your frontend URL:
+### Opção 1: Blueprint (Recomendado)
 
+1. Acesse [Render Dashboard](https://dashboard.render.com)
+2. Clique em **New** → **Blueprint**
+3. Conecte seu GitHub e selecione `bfrpaulondev/crm-api`
+4. O Render detectará o `render.yaml` automaticamente
+5. Configure as variáveis de ambiente manualmente:
+
+| Variável | Valor |
+|----------|-------|
+| `MONGODB_URI` | `mongodb+srv://bfrpaulondev_db_user:fejwbKAe6t6QlPYg@cluster0.cy4nwmv.mongodb.net/crm_api?retryWrites=true&w=majority` |
+| `UPSTASH_REDIS_REST_URL` | `https://summary-coyote-40506.upstash.io` |
+| `UPSTASH_REDIS_REST_TOKEN` | `AZ46AAIncDIxN2Y4NTVhMGFiZDk0OTQ0YTZmOGNmODUwNTE2OWYzOXAyNDA1MDY` |
+| `CORS_ORIGINS` | `https://seu-frontend.com` (ou `*` para desenvolvimento) |
+
+6. Clique em **Apply**
+
+### Opção 2: Manual
+
+1. Acesse [Render Dashboard](https://dashboard.render.com)
+2. Clique em **New** → **Web Service**
+3. Conecte seu GitHub e selecione `bfrpaulondev/crm-api`
+4. Configure:
+
+| Campo | Valor |
+|-------|-------|
+| Name | `crm-api` |
+| Region | Oregon (US West) |
+| Branch | `main` |
+| Runtime | `Node` |
+| Build Command | `npm install && npm run build` |
+| Start Command | `npm start` |
+| Instance Type | `Free` |
+
+5. Adicione as variáveis de ambiente (mesma tabela acima)
+6. Clique em **Create Web Service**
+
+### Após o Deploy
+
+Sua API estará disponível em: `https://crm-api.onrender.com`
+
+Endpoints:
+- GraphQL: `https://crm-api.onrender.com/graphql`
+- Health: `https://crm-api.onrender.com/health`
+- Ready: `https://crm-api.onrender.com/ready`
+
+## Variáveis de Ambiente
+
+| Variável | Obrigatório | Descrição |
+|----------|-------------|-----------|
+| `MONGODB_URI` | ✅ | Connection string do MongoDB Atlas |
+| `UPSTASH_REDIS_REST_URL` | ✅ | URL do Upstash Redis |
+| `UPSTASH_REDIS_REST_TOKEN` | ✅ | Token do Upstash Redis |
+| `JWT_SECRET` | ✅ | Secret para access token (min 32 chars) |
+| `JWT_REFRESH_SECRET` | ✅ | Secret para refresh token (min 32 chars) |
+| `CORS_ORIGINS` | ❌ | Origins permitidas (padrão: `*`) |
+| `PORT` | ❌ | Porta do servidor (padrão: `4000`) |
+
+## API Reference
+
+### Endpoint
 ```
-CORS_ORIGINS=https://myapp.vercel.app,https://myapp.com
+POST /graphql
 ```
 
-## 🐛 Troubleshooting
+### Headers
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
 
-### API returns 401 Unauthorized
+### Queries Principais
 
-- Check if JWT token is included in Authorization header
-- Token format: `Bearer <token>`
-- Token might be expired - use refresh token
+```graphql
+# Listar leads com paginação
+query Leads($first: Int, $after: String, $filter: LeadFilterInput) {
+  leads(first: $first, after: $after, filter: $filter) {
+    edges {
+      node { id name email status score }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
 
-### CORS errors
+# Buscar oportunidade por ID
+query Opportunity($id: ID!) {
+  opportunity(id: $id) {
+    id name value stage probability expectedCloseDate
+    account { id name }
+    contacts { id name email }
+  }
+}
 
-- Add your frontend URL to `CORS_ORIGINS`
-- Include protocol: `https://` not just domain
-- Multiple URLs: comma-separated
+# Dashboard com métricas
+query Dashboard {
+  dashboard {
+    totalLeads
+    qualifiedLeads
+    totalOpportunities
+    totalValue
+    wonValue
+    pipelineByStage {
+      stage
+      count
+      value
+    }
+  }
+}
+```
 
-### MongoDB connection errors
+### Mutations Principais
 
-- Wait a few minutes after creating database
-- Check if MongoDB is in the same region as your web service
-- Verify `MONGODB_URI` environment variable
+```graphql
+# Criar lead
+mutation CreateLead($input: CreateLeadInput!) {
+  createLead(input: $input) {
+    id name email company phone source status score
+  }
+}
 
-### Redis connection errors
+# Qualificar lead
+mutation QualifyLead($id: ID!, $score: Int!) {
+  qualifyLead(id: $id, score: $score) {
+    id status score qualifiedAt
+  }
+}
 
-- Redis is a private service - only accessible within Render
-- Check if Redis is running in the same region
-- Verify `REDIS_URL` environment variable
+# Converter lead em oportunidade
+mutation ConvertLead($id: ID!, $input: ConvertLeadInput!) {
+  convertLead(id: $id, input: $input) {
+    lead { id status convertedAt }
+    opportunity { id name value }
+    account { id name }
+  }
+}
 
-## 📝 License
+# Criar oportunidade
+mutation CreateOpportunity($input: CreateOpportunityInput!) {
+  createOpportunity(input: $input) {
+    id name value stage probability expectedCloseDate
+  }
+}
 
-MIT
+# Fechar oportunidade (ganha/perdida)
+mutation CloseOpportunity($id: ID!, $won: Boolean!, $reason: String) {
+  closeOpportunity(id: $id, won: $won, reason: $reason) {
+    id status closedAt actualCloseDate lossReason
+  }
+}
+```
 
-## 🤝 Contributing
+### Autenticação
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `npm test`
-5. Submit a pull request
+```graphql
+# Login
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    accessToken
+    refreshToken
+    user { id name email role }
+  }
+}
+
+# Refresh token
+mutation RefreshToken($token: String!) {
+  refreshToken(token: $token) {
+    accessToken
+    refreshToken
+  }
+}
+```
+
+## Testes
+
+```bash
+# Todos os testes
+npm test
+
+# Testes com coverage
+npm run test:coverage
+
+# Apenas unitários
+npm run test:unit
+
+# Apenas integração
+npm run test:integration
+```
+
+## Scripts Disponíveis
+
+```bash
+npm run dev          # Desenvolvimento com hot reload
+npm run build        # Build para produção
+npm start            # Inicia servidor produção
+npm test             # Executa testes
+npm run lint         # ESLint
+npm run create-indexes # Cria índices MongoDB
+```
+
+## RBAC - Controle de Acesso
+
+| Role | Permissões |
+|------|------------|
+| `ADMIN` | Acesso total, gestão de usuários |
+| `MANAGER` | CRUD todas entidades, relatórios |
+| `SALES_REP` | CRUD próprios leads/oportunidades |
+| `READ_ONLY` | Apenas leitura |
+
+## Próximos Passos
+
+Antes de ir para produção:
+
+1. **Altere os JWT Secrets** - Gere strings aleatórias de 64 caracteres
+2. **Configure CORS** - Defina a URL do seu frontend
+3. **Crie os índices** - Execute `npm run create-indexes` após o deploy
+4. **Configure storage** - Para uploads, configure AWS S3
+
+## Contato
+
+**Bruno Paulon**
+- GitHub: [@bfrpaulondev](https://github.com/bfrpaulondev)
+- Email: bfrpaulondev@gmail.com
 
 ---
 
-Built with ❤️ for modern CRM needs.
+Desenvolvido por Bruno Paulon
