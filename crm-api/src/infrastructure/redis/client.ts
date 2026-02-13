@@ -95,7 +95,9 @@ async function upstashCommand<T = unknown>(command: string[]): Promise<T | null>
   }
 
   try {
-    const response = await fetch(`${upstashConfig.url}/api/${command[0]}`, {
+    // Upstash REST API format: POST https://<endpoint>/<command>
+    // Body: array of arguments
+    const response = await fetch(`${upstashConfig.url}/${command[0]}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${upstashConfig.token}`,
@@ -105,7 +107,8 @@ async function upstashCommand<T = unknown>(command: string[]): Promise<T | null>
     });
 
     if (!response.ok) {
-      logger.error('Upstash REST error', { status: response.status });
+      const errorText = await response.text();
+      logger.error('Upstash REST error', { status: response.status, error: errorText });
       return null;
     }
 
