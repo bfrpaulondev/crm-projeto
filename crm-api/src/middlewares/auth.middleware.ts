@@ -22,6 +22,12 @@ export async function buildContext(input: { headers: Record<string, string | und
   const authHeader = input.headers['authorization'] || input.headers['Authorization'];
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
+  logger.info('Building auth context', {
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token,
+    tokenLength: token?.length,
+  });
+
   if (!token) {
     return {
       isAuthenticated: false,
@@ -37,6 +43,13 @@ export async function buildContext(input: { headers: Record<string, string | und
       email: string;
       role: string;
     };
+
+    logger.info('Token verified successfully', {
+      userId: decoded.userId,
+      tenantId: decoded.tenantId,
+      email: decoded.email,
+      role: decoded.role,
+    });
 
     const user: ContextUser = {
       id: decoded.userId,
@@ -76,7 +89,7 @@ export async function buildContext(input: { headers: Record<string, string | und
       correlationId,
     };
   } catch (error) {
-    logger.warn('Token verification failed', { error: String(error) });
+    logger.error('Token verification failed', { error: String(error), token: token?.substring(0, 20) + '...' });
     return {
       isAuthenticated: false,
       requestId,
