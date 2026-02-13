@@ -7,45 +7,42 @@ import fastifyCors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { ApolloServer } from '@apollo/server';
 import { fastifyApolloHandler } from '@as-integrations/fastify';
-import { config, isProduction, isDevelopment } from '@/config/index.js';
+import { config, isProduction, isDevelopment, corsOrigins } from './config/index.js';
 import {
   connectToMongo,
   closeMongo,
   mongoHealthCheck,
-} from '@/infrastructure/mongo/connection.js';
+} from './infrastructure/mongo/connection.js';
 import {
   connectToRedis,
   closeRedis,
   redisHealthCheck,
-} from '@/infrastructure/redis/client.js';
+} from './infrastructure/redis/client.js';
 import {
   initOpenTelemetry,
   shutdownOpenTelemetry,
-} from '@/infrastructure/otel/index.js';
-import { logger } from '@/infrastructure/logging/index.js';
-import { builder } from '@/graphql/schema/builder.js';
-import { formatError } from '@/types/errors.js';
-import { buildContext } from '@/middlewares/auth.middleware.js';
-import { createDataLoaders } from '@/graphql/dataloaders.js';
-import { GraphQLContext } from '@/types/context.js';
-import { Permission, ROLE_PERMISSIONS } from '@/types/context.js';
-import depthLimit from 'graphql-depth-limit';
+} from './infrastructure/otel/index.js';
+import { logger } from './infrastructure/logging/index.js';
+import { builder } from './graphql/schema/builder.js';
+import { GraphQLContext } from './types/context.js';
+import { Permission, ROLE_PERMISSIONS } from './types/context.js';
 import * as path from 'path';
+import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
 // Import schema types to register them
-import '@/graphql/schema/types/lead.js';
-import '@/graphql/schema/types/opportunity.js';
-import '@/graphql/schema/types/account.js';
-import '@/graphql/schema/types/activity.js';
-import '@/graphql/schema/types/webhook.js';
+import './graphql/schema/types/lead.js';
+import './graphql/schema/types/opportunity.js';
+import './graphql/schema/types/account.js';
+import './graphql/schema/types/activity.js';
+import './graphql/schema/types/webhook.js';
 
 // Import resolvers
-import '@/graphql/resolvers/index.js';
-import '@/graphql/resolvers/mutations.js';
-import '@/graphql/resolvers/reporting-resolvers.js';
-import '@/graphql/resolvers/auth-resolvers.js';
-import '@/graphql/resolvers/bulk-resolvers.js';
-import '@/graphql/resolvers/upload-resolvers.js';
+import './graphql/resolvers/index.js';
+import './graphql/resolvers/mutations.js';
+import './graphql/resolvers/reporting-resolvers.js';
+import './graphql/resolvers/auth-resolvers.js';
+import './graphql/resolvers/bulk-resolvers.js';
+import './graphql/resolvers/upload-resolvers.js';
 
 // =============================================================================
 // Build GraphQL Schema
@@ -60,42 +57,20 @@ const schema = builder.toSchema();
 const apolloServer = new ApolloServer<GraphQLContext>({
   schema,
   introspection: config.INTROSPECTION_ENABLED,
-  formatError,
+  formatError: (formattedError: GraphQLFormattedError, error: unknown) => {
+    const err = error as GraphQLError | undefined;
+    
+    logger.error('GraphQL error', {
+      message: formattedError.message,
+      code: err?.extensions?.code,
+    });
+
+    return {
+      message: formattedError.message,
+      code: err?.extensions?.code || 'INTERNAL',
+    };
+  },
   plugins: [
-    // Depth limit plugin
-    {
-      requestDidStart: () => ({
-        didResolveOperation({ request, document }) {
-          // Check depth limit
-          const maxDepth = config.GRAPHQL_DEPTH_LIMIT;
-          let maxDepthFound = 0;
-
-          const visit = (node: any, depth: number) => {
-            if (depth > maxDepthFound) maxDepthFound = depth;
-            if (node.selectionSet) {
-              for (const sel of node.selectionSet.selections) {
-                visit(sel, depth + 1);
-              }
-            }
-          };
-
-          for (const def of document.definitions as any[]) {
-            if (def.kind === 'OperationDefinition') {
-              for (const sel of def.selectionSet.selections) {
-                visit(sel, 1);
-              }
-            }
-          }
-
-          if (maxDepthFound > maxDepth) {
-            throw new Error(
-              `Query depth ${maxDepthFound} exceeds maximum ${maxDepth}`
-            );
-          }
-        },
-      }),
-    },
-
     // Logging plugin
     {
       async requestDidStart({ request, contextValue }) {
@@ -114,10 +89,9 @@ const apolloServer = new ApolloServer<GraphQLContext>({
               operationName: request.operationName,
               requestId: contextValue.requestId,
               durationMs: duration,
-              hasErrors:
-                response.body && 'errors' in response.body
-                  ? (response.body as any).errors.length > 0
-                  : false,
+              hasErrors: response.body && 'errors' in response.body
+                ? (response.body as { errors: unknown[] }).errors.length > 0
+                : false,
             });
           },
         };
@@ -131,23 +105,17 @@ const apolloServer = new ApolloServer<GraphQLContext>({
 // =============================================================================
 
 const fastify = Fastify({
-  logger: false, // Usamos pino diretamente
+  logger: false,
   requestIdHeader: 'x-request-id',
   requestIdLogLabel: 'requestId',
-  trustProxy: isProduction, // Trust Render's proxy
+  trustProxy: isProduction,
 });
 
 // =============================================================================
 // CORS Configuration - IMPORTANT FOR RENDER
 // =============================================================================
 
-const corsOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-  : isProduction
-    ? true // Allow all in production if not specified (configure properly!)
-    : ['http://localhost:3000', 'http://localhost:4000', 'http://127.0.0.1:3000'];
-
-await fastify.register(fastifyCors, {
+void fastify.register(fastifyCors, {
   origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -164,7 +132,7 @@ await fastify.register(fastifyCors, {
     'X-RateLimit-Remaining',
     'X-RateLimit-Reset',
   ],
-  maxAge: 86400, // 24 hours
+  maxAge: 86400,
 });
 
 // =============================================================================
@@ -174,15 +142,14 @@ await fastify.register(fastifyCors, {
 if (isDevelopment || process.env.STORAGE_TYPE === 'local') {
   const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
-  await fastify.register(fastifyStatic, {
+  void fastify.register(fastifyStatic, {
     root: uploadDir,
     prefix: '/uploads/',
   });
 }
 
 // =============================================================================
-// Health Check Endpoints (HTTP, outside GraphQL)
-// Required for Render and Kubernetes
+// Health Check Endpoints
 // =============================================================================
 
 fastify.get('/health', async (_request, reply) => {
@@ -236,60 +203,64 @@ fastify.get('/', async (_request, reply) => {
 // GraphQL Endpoint
 // =============================================================================
 
-await apolloServer.start();
+async function setupGraphQL() {
+  await apolloServer.start();
 
-fastify.route({
-  method: ['GET', 'POST', 'OPTIONS'],
-  url: '/graphql',
-  handler: fastifyApolloHandler(apolloServer, {
-    context: async (request) => {
-      const baseContext = await buildContext({
-        req: request.headers as Record<string, string | undefined>,
-      });
+  fastify.route({
+    method: ['GET', 'POST', 'OPTIONS'],
+    url: '/graphql',
+    handler: fastifyApolloHandler(apolloServer, {
+      context: async (request) => {
+        const { buildContext } = await import('./middlewares/auth.middleware.js');
+        const { createDataLoaders } = await import('./graphql/dataloaders.js');
+        
+        const baseContext = await buildContext({
+          headers: request.headers as Record<string, string | undefined>,
+        });
 
-      // Add DataLoaders if tenant is available
-      const loaders = baseContext.tenant
-        ? createDataLoaders(baseContext.tenant.id)
-        : null;
+        const loaders = baseContext.tenant
+          ? createDataLoaders(baseContext.tenant.id)
+          : null;
 
-      const context: GraphQLContext = {
-        user: baseContext.user ?? null,
-        tenant: baseContext.tenant ?? null,
-        isAuthenticated: baseContext.isAuthenticated ?? false,
-        requestId: baseContext.requestId ?? crypto.randomUUID(),
-        correlationId: baseContext.correlationId ?? crypto.randomUUID(),
-        ipAddress:
-          (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
-          request.ip ??
-          null,
-        userAgent: request.headers['user-agent'] ?? null,
-        loaders: loaders!,
-        hasPermission: (permission: Permission) => {
-          if (!baseContext.user) return false;
-          const userPermissions = ROLE_PERMISSIONS[baseContext.user.role];
-          return userPermissions.includes(permission);
-        },
-        hasRole: (role) => {
-          return baseContext.user?.role === role;
-        },
-        requireAuth: () => {
-          if (!baseContext.user) {
-            throw new Error('UNAUTHENTICATED');
-          }
-          return baseContext.user;
-        },
-        requireTenant: () => {
-          if (!baseContext.tenant) {
-            throw new Error('Tenant context required');
-          }
-          return baseContext.tenant;
-        },
-      };
+        const context: GraphQLContext = {
+          user: baseContext.user ?? null,
+          tenant: baseContext.tenant ?? null,
+          isAuthenticated: baseContext.isAuthenticated ?? false,
+          requestId: baseContext.requestId ?? crypto.randomUUID(),
+          correlationId: baseContext.correlationId ?? crypto.randomUUID(),
+          ipAddress:
+            (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+            request.ip ??
+            null,
+          userAgent: request.headers['user-agent'] ?? null,
+          loaders: loaders!,
+          hasPermission: (permission: Permission) => {
+            if (!baseContext.user) return false;
+            const userPermissions = ROLE_PERMISSIONS[baseContext.user.role];
+            return userPermissions.includes(permission);
+          },
+          hasRole: (role) => {
+            return baseContext.user?.role === role;
+          },
+          requireAuth: () => {
+            if (!baseContext.user) {
+              throw new Error('UNAUTHENTICATED');
+            }
+            return baseContext.user;
+          },
+          requireTenant: () => {
+            if (!baseContext.tenant) {
+              throw new Error('Tenant context required');
+            }
+            return baseContext.tenant;
+          },
+        };
 
-      return context;
-    },
-  }),
-});
+        return context;
+      },
+    }),
+  });
+}
 
 // =============================================================================
 // Error Handling
@@ -334,41 +305,6 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
 // =============================================================================
-// Start Server
-// =============================================================================
-
-async function start() {
-  try {
-    // Initialize OpenTelemetry
-    initOpenTelemetry();
-
-    // Connect to databases
-    await connectToMongo();
-    connectToRedis();
-
-    // Start Fastify server
-    // Render sets PORT environment variable
-    const port = parseInt(process.env.PORT || '4000', 10);
-    const host = '0.0.0.0'; // Must be 0.0.0.0 for Render
-
-    await fastify.listen({ port, host });
-
-    logger.info(`🚀 CRM Pipeline API started`, {
-      port,
-      host,
-      env: config.NODE_ENV,
-      graphql: '/graphql',
-      health: '/health',
-      playground: isDevelopment && config.PLAYGROUND_ENABLED,
-      introspection: config.INTROSPECTION_ENABLED,
-    });
-  } catch (error) {
-    logger.error('Failed to start server', { error: String(error) });
-    process.exit(1);
-  }
-}
-
-// =============================================================================
 // Playground HTML
 // =============================================================================
 
@@ -398,6 +334,43 @@ function getPlaygroundHTML(): string {
       </body>
     </html>
   `;
+}
+
+// =============================================================================
+// Start Server
+// =============================================================================
+
+async function start() {
+  try {
+    // Initialize OpenTelemetry
+    initOpenTelemetry();
+
+    // Connect to databases
+    await connectToMongo();
+    connectToRedis();
+
+    // Setup GraphQL
+    await setupGraphQL();
+
+    // Start Fastify server
+    const port = parseInt(process.env.PORT || '4000', 10);
+    const host = '0.0.0.0';
+
+    await fastify.listen({ port, host });
+
+    logger.info(`🚀 CRM Pipeline API started`, {
+      port,
+      host,
+      env: config.NODE_ENV,
+      graphql: '/graphql',
+      health: '/health',
+      playground: isDevelopment && config.PLAYGROUND_ENABLED,
+      introspection: config.INTROSPECTION_ENABLED,
+    });
+  } catch (error) {
+    logger.error('Failed to start server', { error: String(error) });
+    process.exit(1);
+  }
 }
 
 // Start the server

@@ -6,7 +6,7 @@ import { attachmentRepository } from '@/repositories/attachment.repository.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 import { config } from '@/config/index.js';
-import { StorageType, RelatedToType } from '@/types/entities.js';
+import { StorageType } from '@/types/entities.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -25,10 +25,9 @@ export class UploadService {
 
   constructor() {
     this.uploadDir = config.UPLOAD_DIR || './uploads';
-    this.maxFileSize = config.MAX_FILE_SIZE || 10485760; // 10MB
+    this.maxFileSize = config.MAX_FILE_SIZE || 10485760;
     this.allowedTypes = (config.ALLOWED_FILE_TYPES || '').split(',');
 
-    // Ensure upload directory exists
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }
@@ -46,31 +45,20 @@ export class UploadService {
     relatedToId?: string
   ): Promise<UploadResult> {
     return traceServiceOperation('UploadService', 'uploadFile', async () => {
-      // Validate file size
       if (file.data.length > this.maxFileSize) {
         throw new Error(`File size exceeds maximum allowed: ${this.maxFileSize} bytes`);
       }
 
-      // Validate file type
       if (!this.allowedTypes.includes(file.mimetype)) {
         throw new Error(`File type not allowed: ${file.mimetype}`);
       }
 
-      // Generate unique filename
       const ext = path.extname(file.filename);
       const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
       const filePath = path.join(this.uploadDir, uniqueName);
 
-      // Save file
       await fs.promises.writeFile(filePath, file.data);
 
-      // Determine relatedToType
-      let relatedType = RelatedToType.LEAD;
-      if (relatedToType === 'CONTACT') relatedType = RelatedToType.CONTACT;
-      else if (relatedToType === 'ACCOUNT') relatedType = RelatedToType.ACCOUNT;
-      else if (relatedToType === 'OPPORTUNITY') relatedType = RelatedToType.OPPORTUNITY;
-
-      // Create attachment record
       const attachment = await attachmentRepository.create({
         tenantId,
         fileName: file.filename,
@@ -80,7 +68,7 @@ export class UploadService {
         url: `/uploads/${uniqueName}`,
         storageType: StorageType.LOCAL,
         storageKey: uniqueName,
-        relatedToType: relatedType,
+        relatedToType: (relatedToType || 'LEAD') as never,
         relatedToId: relatedToId || '',
         uploadedBy: userId,
         description: null,
@@ -115,7 +103,6 @@ export class UploadService {
         return false;
       }
 
-      // Delete file from disk
       try {
         const filePath = path.join(this.uploadDir, attachment.storageKey);
         await fs.promises.unlink(filePath);
@@ -126,7 +113,6 @@ export class UploadService {
         });
       }
 
-      // Delete from database
       await attachmentRepository.deleteById(id, tenantId);
 
       logger.info('File deleted', { attachmentId: id, tenantId });

@@ -3,8 +3,8 @@
 // =============================================================================
 
 import { BaseRepository, PaginatedResult } from './base.repository.js';
-import { Activity, ActivityType, ActivityStatus, Note } from '@/types/entities.js';
-import { Filter, ObjectId, Db } from 'mongodb';
+import { Activity, ActivityStatus, Note, NoteVisibility } from '@/types/entities.js';
+import { Filter, ObjectId } from 'mongodb';
 import { ActivityFilter } from '@/types/validation.js';
 import { getDb } from '@/infrastructure/mongo/connection.js';
 
@@ -16,7 +16,7 @@ export class ActivityRepository extends BaseRepository<Activity> {
     filter?: ActivityFilter,
     pagination?: { limit?: number; cursor?: string }
   ): Promise<PaginatedResult<Activity>> {
-    const queryFilter: Filter<Activity> = {};
+    const queryFilter: Record<string, unknown> = {};
 
     if (filter) {
       if (filter.type) queryFilter.type = filter.type;
@@ -27,13 +27,14 @@ export class ActivityRepository extends BaseRepository<Activity> {
       if (filter.relatedToId) queryFilter.relatedToId = filter.relatedToId;
 
       if (filter.dueAfter || filter.dueBefore) {
-        queryFilter.dueDate = {};
-        if (filter.dueAfter) queryFilter.dueDate.$gte = filter.dueAfter;
-        if (filter.dueBefore) queryFilter.dueDate.$lte = filter.dueBefore;
+        const dateFilter: Record<string, unknown> = {};
+        if (filter.dueAfter) dateFilter.$gte = filter.dueAfter;
+        if (filter.dueBefore) dateFilter.$lte = filter.dueBefore;
+        queryFilter.dueDate = dateFilter;
       }
     }
 
-    return this.findMany({ filter: queryFilter, pagination }, tenantId);
+    return this.findMany({ filter: queryFilter as Filter<Activity>, pagination }, tenantId);
   }
 
   async findByRelatedTo(
@@ -58,7 +59,7 @@ export class ActivityRepository extends BaseRepository<Activity> {
   ): Promise<Activity[]> {
     const collection = this.getCollection();
 
-    const filter: Filter<Activity> = {
+    const filter: Record<string, unknown> = {
       tenantId,
       status: { $in: [ActivityStatus.PENDING, ActivityStatus.IN_PROGRESS] },
       dueDate: { $gte: new Date() },
@@ -69,11 +70,13 @@ export class ActivityRepository extends BaseRepository<Activity> {
       filter.ownerId = ownerId;
     }
 
-    return collection
+    const result = await collection
       .find(filter)
       .sort({ dueDate: 1 })
       .limit(limit ?? 20)
       .toArray();
+
+    return result as Activity[];
   }
 
   async complete(
@@ -104,7 +107,7 @@ export class ActivityRepository extends BaseRepository<Activity> {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const [byType, byStatus, completedThisWeek] = await Promise.all([
+    const [byTypeResult, byStatusResult, completedThisWeek] = await Promise.all([
       collection
         .aggregate([
           { $match: { tenantId, deletedAt: null } },
@@ -125,30 +128,28 @@ export class ActivityRepository extends BaseRepository<Activity> {
       }),
     ]);
 
-    const toRecord = (arr: Array<{ _id: string | null; count: number }>) =>
-      arr.reduce((acc, { _id, count }) => {
-        if (_id) acc[_id] = count;
-        return acc;
-      }, {} as Record<string, number>);
+    const byType: Record<string, number> = {};
+    for (const item of byTypeResult) {
+      byType[String(item._id)] = item.count;
+    }
 
-    return {
-      byType: toRecord(byType),
-      byStatus: toRecord(byStatus),
-      completedThisWeek,
-    };
+    const byStatus: Record<string, number> = {};
+    for (const item of byStatusResult) {
+      byStatus[String(item._id)] = item.count;
+    }
+
+    return { byType, byStatus, completedThisWeek };
   }
 
   // ==========================================================================
-  // Notes (stored in separate collection but managed together)
+  // Notes
   // ==========================================================================
 
   private notesCollectionName = 'notes';
 
   private getNotesCollection() {
-    if (!this.db) {
-      this.db = getDb();
-    }
-    return this.db.collection<Note>(this.notesCollectionName);
+    const db = getDb();
+    return db.collection<Note>(this.notesCollectionName);
   }
 
   async createNote(data: {
@@ -166,7 +167,7 @@ export class ActivityRepository extends BaseRepository<Activity> {
       _id: new ObjectId(),
       tenantId: data.tenantId,
       body: data.body,
-      visibility: data.visibility as Note['visibility'],
+      visibility: data.visibility as NoteVisibility,
       relatedToType: data.relatedToType as Note['relatedToType'],
       relatedToId: data.relatedToId,
       createdBy: data.createdBy,
@@ -189,7 +190,7 @@ export class ActivityRepository extends BaseRepository<Activity> {
     return collection
       .find({
         tenantId,
-        relatedToType,
+        relatedToType: relatedToType as Note['relatedToType'],
         relatedToId,
       })
       .sort({ createdAt: -1 })
@@ -204,14 +205,15 @@ export class ActivityRepository extends BaseRepository<Activity> {
     const collection = this.getNotesCollection();
     const _id = new ObjectId(id);
 
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    if (data.body) updateData.body = data.body;
+    if (data.visibility) updateData.visibility = data.visibility as NoteVisibility;
+
     const result = await collection.findOneAndUpdate(
       { _id, tenantId },
-      {
-        $set: {
-          ...data,
-          updatedAt: new Date(),
-        },
-      },
+      { $set: updateData },
       { returnDocument: 'after' }
     );
 

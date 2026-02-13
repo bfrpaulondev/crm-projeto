@@ -2,9 +2,21 @@
 // GraphQL Context Types
 // =============================================================================
 
-import { UserRole, TenantPlan, TenantSettings } from './entities.js';
+import { UserRole, TenantSettings } from './entities.js';
 import { ObjectId } from 'mongodb';
 import DataLoader from 'dataloader';
+
+// Export TenantPlan for use in auth middleware
+export { TenantPlan } from './entities.js';
+
+// TenantPlan enum for use in context
+export const TenantPlan = {
+  STARTER: 'STARTER',
+  PROFESSIONAL: 'PROFESSIONAL',
+  ENTERPRISE: 'ENTERPRISE',
+} as const;
+
+export type TenantPlan = typeof TenantPlan[keyof typeof TenantPlan];
 
 /**
  * Utilizador autenticado no contexto
