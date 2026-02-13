@@ -156,7 +156,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(data.login.user);
       setTenant(data.login.tenant);
 
-      router.push('/');
+      // Use replace instead of push to avoid history issues
+      router.replace('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);
@@ -184,7 +185,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(data.register.user);
       setTenant(data.register.tenant);
       
-      router.push('/');
+      // Use replace instead of push to avoid history issues
+      router.replace('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed';
       setError(message);
@@ -198,7 +200,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     clearTokens();
     setUser(null);
     setTenant(null);
-    router.push('/login');
+    router.replace('/login');
   }, [router]);
 
   const clearError = useCallback(() => {

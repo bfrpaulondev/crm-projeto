@@ -1,28 +1,26 @@
 import { ApolloLink, Observable } from '@apollo/client';
 
-const TOKEN_KEY = 'crm_access_token';
-const REFRESH_TOKEN_KEY = 'crm_refresh_token';
-
+// Use same keys as graphql/client.ts for consistency
 export const getAccessToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem('accessToken');
 };
 
 export const getRefreshToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return localStorage.getItem('refreshToken');
 };
 
 export const setTokens = (accessToken: string, refreshToken: string): void => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
 };
 
 export const clearTokens = (): void => {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
 };
 
 export const getAuthHeaders = (): Record<string, string> => {
