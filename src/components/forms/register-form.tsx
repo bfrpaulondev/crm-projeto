@@ -12,7 +12,8 @@ import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, User, Building2 } from '
 import { toast } from 'sonner';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   tenantName: z.string().min(2, 'Company name must be at least 2 characters'),
@@ -37,7 +38,8 @@ export function RegisterForm() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       password: '',
       tenantName: '',
@@ -64,7 +66,11 @@ export function RegisterForm() {
       // Auto-generate slug from tenant name if not manually set
       const slug = data.tenantSlug || generateSlug();
       await registerUser({
-        ...data,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        tenantName: data.tenantName,
         tenantSlug: slug,
       });
       toast.success('Account created successfully!');
@@ -82,22 +88,42 @@ export function RegisterForm() {
         </div>
       )}
       
-      <div className="space-y-2">
-        <Label htmlFor="name" className="text-white">Your Name</Label>
-        <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            id="name"
-            type="text"
-            placeholder="John Doe"
-            {...register('name')}
-            className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-400 focus:ring-purple-400/20"
-            aria-invalid={!!errors.name}
-          />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName" className="text-white">First Name</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              id="firstName"
+              type="text"
+              placeholder="John"
+              {...register('firstName')}
+              className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-400 focus:ring-purple-400/20"
+              aria-invalid={!!errors.firstName}
+            />
+          </div>
+          {errors.firstName && (
+            <p className="text-sm text-red-400" role="alert">{errors.firstName.message}</p>
+          )}
         </div>
-        {errors.name && (
-          <p className="text-sm text-red-400" role="alert">{errors.name.message}</p>
-        )}
+        
+        <div className="space-y-2">
+          <Label htmlFor="lastName" className="text-white">Last Name</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              id="lastName"
+              type="text"
+              placeholder="Doe"
+              {...register('lastName')}
+              className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-purple-400 focus:ring-purple-400/20"
+              aria-invalid={!!errors.lastName}
+            />
+          </div>
+          {errors.lastName && (
+            <p className="text-sm text-red-400" role="alert">{errors.lastName.message}</p>
+          )}
+        </div>
       </div>
       
       <div className="space-y-2">
