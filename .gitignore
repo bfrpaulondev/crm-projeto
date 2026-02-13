@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.production
 
 # vercel
 .vercel
@@ -43,9 +45,27 @@ local-*
 .claude
 .z-ai-config
 dev.log
-test
-prompt
-
 server.log
+
 # Skills directory
 /skills/
+
+# API directory (separate repository)
+/crm-api/
+
+# Uploads
+/upload/
+
+# Download temp files
+/download/
+
+# Development files
+.zscripts/
+examples/
+mini-services/
+prisma/
+db/
+skills/
+Caddyfile
+render.yaml
+worklog.md

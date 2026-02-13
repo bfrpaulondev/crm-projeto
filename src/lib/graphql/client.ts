@@ -1,6 +1,6 @@
 // GraphQL Client using native fetch - compatible with Next.js 16
 
-const API_URL = 'https://crm-api-89lh.onrender.com/graphql';
+const API_URL = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'https://crm-api-89lh.onrender.com/graphql';
 
 interface GraphQLResponse<T> {
   data?: T;

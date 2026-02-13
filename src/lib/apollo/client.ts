@@ -9,7 +9,7 @@ import {
 } from '@apollo/client';
 import { authLink, errorLink } from './auth-link';
 
-const GRAPHQL_API_URL = 'https://crm-api-89lh.onrender.com/graphql';
+const GRAPHQL_API_URL = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'https://crm-api-89lh.onrender.com/graphql';
 
 function createApolloClient() {
   const httpLink = new HttpLink({
