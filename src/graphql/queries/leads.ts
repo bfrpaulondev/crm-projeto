@@ -47,6 +47,33 @@ export const GET_DASHBOARD = gql`
   }
 `;
 
+// Pipeline with opportunities by stage
+export const GET_PIPELINE = gql`
+  query GetPipeline {
+    pipeline {
+      stage
+      opportunities {
+        id
+        name
+        value
+        stage
+        probability
+        expectedCloseDate
+        assignedTo {
+          id
+          name
+        }
+        lead {
+          id
+          firstName
+          lastName
+          company
+        }
+      }
+    }
+  }
+`;
+
 // Opportunities
 export const GET_OPPORTUNITIES = gql`
   query GetOpportunities {

@@ -10,6 +10,24 @@ export const CREATE_LEAD_MUTATION = gql`
   }
 `;
 
+export const UPDATE_LEAD_MUTATION = gql`
+  mutation UpdateLead($id: String!, $input: UpdateLeadInput!) {
+    updateLead(id: $id, input: $input) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      companyName
+      status
+      source
+      estimatedValue
+      notes
+      updatedAt
+    }
+  }
+`;
+
 export const QUALIFY_LEAD_MUTATION = gql`
   mutation QualifyLead($id: String!) {
     qualifyLead(id: $id) {
@@ -33,6 +51,16 @@ export const CONVERT_LEAD_MUTATION = gql`
 export const DELETE_LEAD_MUTATION = gql`
   mutation DeleteLead($id: String!) {
     deleteLead(id: $id)
+  }
+`;
+
+export const UPDATE_OPPORTUNITY_STAGE_MUTATION = gql`
+  mutation UpdateOpportunityStage($id: String!, $stage: String!) {
+    updateOpportunityStage(id: $id, stage: $stage) {
+      id
+      stage
+      updatedAt
+    }
   }
 `;
 
@@ -65,5 +93,18 @@ export const CREATE_WEBHOOK_MUTATION = gql`
 export const DELETE_WEBHOOK_MUTATION = gql`
   mutation DeleteWebhook($id: String!) {
     deleteWebhook(id: $id)
+  }
+`;
+
+export const CREATE_OPPORTUNITY_MUTATION = gql`
+  mutation CreateOpportunity($input: CreateOpportunityInput!) {
+    createOpportunity(input: $input) {
+      id
+      name
+      value
+      stage
+      probability
+      createdAt
+    }
   }
 `;

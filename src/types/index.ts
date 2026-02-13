@@ -5,6 +5,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  name?: string;
   role: UserRole;
 }
 
@@ -26,31 +27,40 @@ export interface Lead {
   email: string;
   phone?: string;
   companyName?: string;
+  company?: string;
   title?: string;
   status: LeadStatus;
+  source?: LeadSource;
+  estimatedValue?: number;
+  notes?: string;
   score?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'CONVERTED' | 'UNQUALIFIED';
+export type LeadSource = 'WEBSITE' | 'REFERRAL' | 'COLD_CALL' | 'EMAIL_CAMPAIGN' | 'SOCIAL_MEDIA' | 'TRADE_SHOW' | 'OTHER';
 
 export interface Opportunity {
   id: string;
   name: string;
+  value?: number;
   amount: number;
   status: OpportunityStatus;
+  stage?: OpportunityStage;
   probability: number;
   stageId?: string;
-  stage?: Stage;
   accountId?: string;
   contactId?: string;
   expectedCloseDate?: string;
+  assignedTo?: User;
+  lead?: Lead;
   createdAt: string;
   updatedAt: string;
 }
 
 export type OpportunityStatus = 'OPEN' | 'WON' | 'LOST';
+export type OpportunityStage = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'NEGOTIATION' | 'CLOSED_WON' | 'CLOSED_LOST';
 
 export interface Stage {
   id: string;
@@ -117,6 +127,18 @@ export interface CreateLeadInput {
   email: string;
   phone?: string;
   companyName?: string;
+}
+
+export interface UpdateLeadInput {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  status?: LeadStatus;
+  source?: LeadSource;
+  estimatedValue?: number;
+  notes?: string;
 }
 
 export interface QualifyLeadInput {
