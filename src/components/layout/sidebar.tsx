@@ -18,10 +18,10 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Leads', href: '/dashboard/leads', icon: Users },
-  { name: 'Pipeline', href: '/dashboard/pipeline', icon: GitBranch },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Leads', href: '/leads', icon: Users },
+  { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
@@ -40,7 +40,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
             <Building2 className="w-5 h-5 text-white" />
           </div>

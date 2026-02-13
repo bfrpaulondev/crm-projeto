@@ -31,7 +31,7 @@ export function RecentLeadsTable({ leads }: RecentLeadsTableProps) {
           <Users className="w-5 h-5 text-purple-600" />
           Recent Leads
         </CardTitle>
-        <Link href="/dashboard/leads">
+        <Link href="/leads">
           <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700 hover:bg-purple-50">
             View all
             <ArrowRight className="w-4 h-4 ml-1" />
@@ -42,7 +42,7 @@ export function RecentLeadsTable({ leads }: RecentLeadsTableProps) {
         {leads.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-slate-500">No leads yet</p>
-            <Link href="/dashboard/leads">
+            <Link href="/leads">
               <Button variant="outline" size="sm" className="mt-4">
                 Add your first lead
               </Button>
@@ -63,7 +63,7 @@ export function RecentLeadsTable({ leads }: RecentLeadsTableProps) {
               {leads.slice(0, 5).map((lead) => (
                 <TableRow key={lead.id} className="group hover:bg-slate-50/50 cursor-pointer">
                   <TableCell className="hidden sm:table-cell">
-                    <Link href={`/dashboard/leads/${lead.id}`} className="flex items-center gap-3">
+                    <Link href={`/leads/${lead.id}`} className="flex items-center gap-3">
                       <Avatar className="h-8 w-8 bg-purple-100">
                         <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-medium">
                           {getInitials(lead.firstName, lead.lastName)}

@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     const token = getAccessToken();
     if (token) {
-      router.push('/dashboard');
+      router.push('/');
     } else {
       router.push('/login');
     }

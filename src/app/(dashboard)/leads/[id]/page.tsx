@@ -78,7 +78,7 @@ export default function LeadDetailPage() {
     refetchQueries: [{ query: GET_LEADS, variables: { first: 20 } }],
     onCompleted: () => {
       toast.success('Lead deleted successfully');
-      router.push('/dashboard/leads');
+      router.push('/leads');
     },
     onError: (err) => {
       toast.error(`Failed to delete lead: ${err.message}`);
@@ -119,7 +119,7 @@ export default function LeadDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-red-500">Lead not found</p>
-        <Button onClick={() => router.push('/dashboard/leads')} variant="outline">
+        <Button onClick={() => router.push('/leads')} variant="outline">
           Back to Leads
         </Button>
       </div>
@@ -149,7 +149,7 @@ export default function LeadDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push('/dashboard/leads')}
+            onClick={() => router.push('/leads')}
             className="text-slate-600"
           >
             <ArrowLeft className="w-5 h-5" />

@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
-  const { isLoading } = useRedirectIfAuthenticated('/dashboard');
+  const { isLoading } = useRedirectIfAuthenticated('/');
 
   if (isLoading || authLoading || isAuthenticated) {
     return (

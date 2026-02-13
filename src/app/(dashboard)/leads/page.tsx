@@ -230,7 +230,7 @@ export default function LeadsPage() {
                       <TableRow
                         key={lead.id}
                         className="cursor-pointer hover:bg-slate-50/50"
-                        onClick={() => window.location.href = `/dashboard/leads/${lead.id}`}
+                        onClick={() => window.location.href = `/leads/${lead.id}`}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">

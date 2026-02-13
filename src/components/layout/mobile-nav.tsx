@@ -17,10 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Leads', href: '/dashboard/leads', icon: Users },
-  { name: 'Pipeline', href: '/dashboard/pipeline', icon: GitBranch },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Leads', href: '/leads', icon: Users },
+  { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 interface MobileNavProps {

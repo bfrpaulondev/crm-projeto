@@ -17,7 +17,7 @@ export function useRequireAuth(redirectTo = '/login') {
   return { isAuthenticated, isLoading };
 }
 
-export function useRedirectIfAuthenticated(redirectTo = '/dashboard') {
+export function useRedirectIfAuthenticated(redirectTo = '/') {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
