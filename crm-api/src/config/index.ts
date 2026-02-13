@@ -13,7 +13,7 @@ const envSchema = z.object({
   RENDER: z.string().optional(), // Set by Render automatically
 
   // MongoDB
-  MONGODB_URI: z.string(),
+  MONGODB_URI: z.string().default('mongodb://localhost:27017/crm_api'),
   MONGODB_DB_NAME: z.string().default('crm_api'),
   MONGODB_POOL_SIZE: z.coerce.number().default(10),
 
@@ -29,9 +29,9 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().default('*'),
 
   // JWT
-  JWT_SECRET: z.string().min(32),
+  JWT_SECRET: z.string().min(32).default('dev-jwt-secret-change-in-production-32ch'),
   JWT_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32).default('dev-refresh-secret-change-in-prod-32ch'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   // Security
@@ -81,6 +81,19 @@ if (!parsed.success) {
 }
 
 export const config = Object.freeze(parsed.data);
+
+// Warn if using default secrets in production
+if (config.NODE_ENV === 'production') {
+  if (config.JWT_SECRET === 'dev-jwt-secret-change-in-production-32ch') {
+    console.warn('⚠️ WARNING: Using default JWT_SECRET in production! Please set a secure secret.');
+  }
+  if (config.JWT_REFRESH_SECRET === 'dev-refresh-secret-change-in-prod-32ch') {
+    console.warn('⚠️ WARNING: Using default JWT_REFRESH_SECRET in production! Please set a secure secret.');
+  }
+  if (config.MONGODB_URI === 'mongodb://localhost:27017/crm_api') {
+    console.warn('⚠️ WARNING: Using default MONGODB_URI. Please configure your MongoDB connection.');
+  }
+}
 
 // Types export
 export type Config = typeof config;
