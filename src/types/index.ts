@@ -104,7 +104,7 @@ export interface AuthTokens {
 export interface LoginInput {
   email: string;
   password: string;
-  tenantId: string;
+  tenantSlug: string;
 }
 
 export interface RegisterInput {
