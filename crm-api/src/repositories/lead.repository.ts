@@ -2,8 +2,8 @@
 // Lead Repository
 // =============================================================================
 
-import { BaseRepository, PaginatedResult, FindManyOptions } from './base.repository.js';
-import { Lead, LeadStatus, LeadSource } from '@/types/entities.js';
+import { BaseRepository, PaginatedResult } from './base.repository.js';
+import { Lead, LeadStatus } from '@/types/entities.js';
 import { Filter, ObjectId } from 'mongodb';
 import { LeadFilter } from '@/types/validation.js';
 
@@ -59,7 +59,7 @@ export class LeadRepository extends BaseRepository<Lead> {
       }
       if (filter.hasCompany !== undefined) {
         if (filter.hasCompany) {
-          queryFilter.companyName = { $exists: true, $ne: null, $ne: '' };
+          queryFilter.companyName = { $exists: true, $nin: [null, ''] };
         } else {
           queryFilter.$or = [
             { companyName: null },
@@ -194,7 +194,6 @@ export class LeadRepository extends BaseRepository<Lead> {
       {
         $inc: { score: points },
         $set: { updatedAt: new Date() },
-        $max: { score: 100 }, // Cap at 100
       },
       { returnDocument: 'after' }
     );

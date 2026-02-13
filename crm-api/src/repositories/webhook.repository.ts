@@ -577,9 +577,10 @@ export class WebhookDeliveryRepository {
 
       const matchStage: Record<string, unknown> = { webhookId, tenantId };
       if (startDate || endDate) {
-        matchStage.createdAt = {};
-        if (startDate) matchStage.createdAt.$gte = startDate;
-        if (endDate) matchStage.createdAt.$lte = endDate;
+        const dateFilter: Record<string, unknown> = {};
+        if (startDate) dateFilter.$gte = startDate;
+        if (endDate) dateFilter.$lte = endDate;
+        matchStage.createdAt = dateFilter;
       }
 
       const statsResult = await collection

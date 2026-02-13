@@ -2,7 +2,7 @@
 // GraphQL Context Types
 // =============================================================================
 
-import { User, UserRole, Tenant, TenantPlan, TenantSettings } from './entities.js';
+import { UserRole, TenantPlan, TenantSettings } from './entities.js';
 import { ObjectId } from 'mongodb';
 import DataLoader from 'dataloader';
 

@@ -10,18 +10,29 @@ import {
   Account,
   Opportunity,
   OpportunityStatus,
+  AccountType,
+  AccountTier,
+  AccountStatus,
 } from '@/types/entities.js';
 import { CreateLeadInput, LeadFilter, ConvertLeadInput } from '@/types/validation.js';
-import { Errors, APIError, ErrorCode } from '@/types/errors.js';
+import { Errors } from '@/types/errors.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 import { logger } from '@/infrastructure/logging/index.js';
-import { ObjectId } from 'mongodb';
-import { createIdempotencyKey, checkIdempotencyKey } from '@/infrastructure/redis/client.js';
+import { cacheGet, cacheSet } from '@/infrastructure/redis/client.js';
 import { AccountRepository } from '@/repositories/account.repository.js';
 import { ContactRepository } from '@/repositories/contact.repository.js';
 import { OpportunityRepository } from '@/repositories/opportunity.repository.js';
 import { StageRepository } from '@/repositories/stage.repository.js';
 import { AuditLogRepository } from '@/repositories/audit-log.repository.js';
+
+// Helper for idempotency
+async function checkIdempotencyKey(tenantId: string, operation: string, key: string): Promise<unknown | null> {
+  return cacheGet(`idempotency:${tenantId}:${operation}:${key}`);
+}
+
+async function createIdempotencyKey(tenantId: string, operation: string, key: string, result: unknown, ttlSeconds: number): Promise<void> {
+  await cacheSet(`idempotency:${tenantId}:${operation}:${key}`, result, ttlSeconds);
+}
 
 export class LeadService {
   constructor(
@@ -85,7 +96,7 @@ export class LeadService {
         entityId: lead._id.toHexString(),
         action: 'CREATE',
         actorId: userId,
-        actorEmail: '', // TODO: passar do contexto
+        actorEmail: '',
         changes: { new: lead },
         metadata: { requestId },
         requestId,
@@ -343,25 +354,22 @@ export class LeadService {
         );
       }
 
-      // 4. Preparar dados para criação das entidades
-      const now = new Date();
-
-      // Criar Account
-      const accountData = {
+      // 4. Criar Account
+      const accountData: Omit<Account, 'createdAt' | 'updatedAt' | '_id'> = {
         tenantId,
         ownerId: lead.ownerId,
         name: input.accountName || lead.companyName || `${lead.firstName} ${lead.lastName}'s Company`,
         domain: null,
-        website: lead.website,
-        industry: lead.industry,
+        website: lead.website ?? null,
+        industry: lead.industry ?? null,
         employees: null,
         annualRevenue: null,
-        phone: lead.phone,
+        phone: lead.phone ?? null,
         billingAddress: null,
         shippingAddress: null,
-        type: 'PROSPECT' as const,
-        tier: 'SMB' as const,
-        status: 'ACTIVE' as const,
+        type: AccountType.PROSPECT,
+        tier: AccountTier.SMB,
+        status: AccountStatus.ACTIVE,
         parentAccountId: null,
         createdBy: userId,
       };
@@ -369,16 +377,16 @@ export class LeadService {
       const account = await this.accountRepo.create(accountData);
 
       // Criar Contact
-      const contactData = {
+      const contactData: Omit<Contact, 'createdAt' | 'updatedAt' | '_id'> = {
         tenantId,
         accountId: account._id.toHexString(),
         ownerId: lead.ownerId,
         firstName: lead.firstName,
         lastName: lead.lastName,
         email: lead.email,
-        phone: lead.phone,
+        phone: lead.phone ?? null,
         mobile: null,
-        title: lead.title,
+        title: lead.title ?? null,
         department: null,
         linkedinUrl: null,
         isPrimary: true,
@@ -403,7 +411,7 @@ export class LeadService {
           );
         }
 
-        const opportunityData = {
+        const opportunityData: Omit<Opportunity, 'createdAt' | 'updatedAt' | '_id'> = {
           tenantId,
           accountId: account._id.toHexString(),
           contactId: contact._id.toHexString(),
@@ -418,7 +426,7 @@ export class LeadService {
           actualCloseDate: null,
           status: OpportunityStatus.OPEN,
           type: null,
-          leadSource: lead.source,
+          leadSource: lead.source ?? null,
           nextStep: null,
           competitorInfo: null,
           timeline: [],
@@ -454,13 +462,9 @@ export class LeadService {
         actorEmail: '',
         changes: {
           old: lead,
-          new: {
-            contactId: contact._id.toHexString(),
-            accountId: account._id.toHexString(),
-            opportunityId: opportunity?._id.toHexString(),
-          },
+          new: convertedLead,
         },
-        metadata: { requestId },
+        metadata: { requestId, contactId: contact._id.toHexString(), accountId: account._id.toHexString() },
         requestId,
       });
 
@@ -471,10 +475,10 @@ export class LeadService {
           'convert_lead',
           input.idempotencyKey,
           {
-            leadId: convertedLead._id.toHexString(),
-            contactId: contact._id.toHexString(),
-            accountId: account._id.toHexString(),
-            opportunityId: opportunity?._id.toHexString(),
+            lead: convertedLead,
+            contact,
+            account,
+            opportunity,
           },
           86400 // 24 horas
         );

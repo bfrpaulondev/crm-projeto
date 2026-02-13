@@ -104,7 +104,7 @@ export class OpportunityRepository extends BaseRepository<Opportunity> {
     tenantId: string,
     status: OpportunityStatus.WON | OpportunityStatus.LOST,
     userId?: string,
-    reason?: string
+    _reason?: string
   ): Promise<Opportunity | null> {
     const collection = this.getCollection();
     const _id = new ObjectId(id);

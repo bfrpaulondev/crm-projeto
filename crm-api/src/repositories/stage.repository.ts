@@ -4,7 +4,7 @@
 
 import { BaseRepository } from './base.repository.js';
 import { Stage } from '@/types/entities.js';
-import { Filter } from 'mongodb';
+import { Filter, ObjectId, AnyBulkWriteOperation } from 'mongodb';
 
 export class StageRepository extends BaseRepository<Stage> {
   protected collectionName = 'stages';
@@ -77,19 +77,17 @@ export class StageRepository extends BaseRepository<Stage> {
   async reorderStages(tenantId: string, stageOrders: Array<{ id: string; order: number }>): Promise<void> {
     const collection = this.getCollection();
 
-    const bulkOps = stageOrders.map(({ id, order }) => ({
+    const bulkOps: AnyBulkWriteOperation<Stage>[] = stageOrders.map(({ id, order }) => ({
       updateOne: {
-        filter: { _id: new (collection as unknown as { constructor: typeof ObjectId }).constructor(id), tenantId },
+        filter: { _id: new ObjectId(id), tenantId },
         update: { $set: { order, updatedAt: new Date() } },
       },
     }));
 
     if (bulkOps.length > 0) {
-      await collection.bulkWrite(bulkOps as unknown[]);
+      await collection.bulkWrite(bulkOps);
     }
   }
 }
-
-import { ObjectId } from 'mongodb';
 
 export const stageRepository = new StageRepository();

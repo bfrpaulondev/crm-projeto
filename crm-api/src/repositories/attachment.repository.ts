@@ -2,7 +2,7 @@
 // Attachment Repository - File Attachment Data Access
 // =============================================================================
 
-import { BaseRepository, PaginatedResult, FindManyOptions } from './base.repository.js';
+import { BaseRepository, PaginatedResult } from './base.repository.js';
 import { Attachment, RelatedToType } from '@/types/entities.js';
 import { Filter, ObjectId } from 'mongodb';
 import { logger } from '@/infrastructure/logging/index.js';
