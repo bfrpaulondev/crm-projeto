@@ -2,10 +2,10 @@
 // Webhook Service
 // =============================================================================
 
-import { webhookRepository, Webhook, WebhookEvent, WebhookDelivery as WebhookDeliveryType } from '@/repositories/webhook.repository.js';
+import { webhookConfigRepository, webhookDeliveryRepository } from '@/repositories/webhook.repository.js';
+import { WebhookConfig, WebhookDelivery } from '@/types/webhook.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
-import { cacheGet, cacheSet } from '@/infrastructure/redis/client.js';
 
 interface CreateWebhookInput {
   name: string;
@@ -23,23 +23,20 @@ interface TestWebhookResult {
 }
 
 export class WebhookService {
-  private readonly maxRetries = 3;
   private readonly timeout = 30000; // 30 seconds
 
   async create(
     tenantId: string,
     userId: string,
     input: CreateWebhookInput
-  ): Promise<Webhook> {
+  ): Promise<WebhookConfig> {
     return traceServiceOperation('WebhookService', 'create', async () => {
-      const webhook = await webhookRepository.create({
-        tenantId,
+      const webhook = await webhookConfigRepository.create(tenantId, userId, {
         name: input.name,
         url: input.url,
         events: input.events,
         secret: input.secret || crypto.randomUUID(),
         isActive: input.isActive ?? true,
-        createdBy: userId,
       });
 
       logger.info('Webhook created', {
@@ -52,21 +49,22 @@ export class WebhookService {
     });
   }
 
-  async list(tenantId: string): Promise<Webhook[]> {
-    return webhookRepository.findAll(tenantId);
+  async list(tenantId: string): Promise<WebhookConfig[]> {
+    const result = await webhookConfigRepository.findByTenant(tenantId);
+    return result.data;
   }
 
-  async getById(id: string, tenantId: string): Promise<Webhook | null> {
-    return webhookRepository.findById(id, tenantId);
+  async getById(id: string, tenantId: string): Promise<WebhookConfig | null> {
+    return webhookConfigRepository.findById(id, tenantId);
   }
 
   async update(
     id: string,
     tenantId: string,
     updates: Partial<CreateWebhookInput>
-  ): Promise<Webhook | null> {
+  ): Promise<WebhookConfig | null> {
     return traceServiceOperation('WebhookService', 'update', async () => {
-      const webhook = await webhookRepository.updateById(id, tenantId, updates);
+      const webhook = await webhookConfigRepository.updateById(id, tenantId, updates);
 
       if (webhook) {
         logger.info('Webhook updated', {
@@ -81,7 +79,7 @@ export class WebhookService {
 
   async delete(id: string, tenantId: string): Promise<boolean> {
     return traceServiceOperation('WebhookService', 'delete', async () => {
-      const deleted = await webhookRepository.deleteById(id, tenantId);
+      const deleted = await webhookConfigRepository.deleteById(id, tenantId);
 
       if (deleted) {
         logger.info('Webhook deleted', {
@@ -96,7 +94,7 @@ export class WebhookService {
 
   async test(id: string, tenantId: string): Promise<TestWebhookResult> {
     return traceServiceOperation('WebhookService', 'test', async () => {
-      const webhook = await webhookRepository.findById(id, tenantId);
+      const webhook = await webhookConfigRepository.findById(id, tenantId);
 
       if (!webhook) {
         throw new Error('Webhook not found');
@@ -147,7 +145,7 @@ export class WebhookService {
     payload: unknown
   ): Promise<void> {
     return traceServiceOperation('WebhookService', 'triggerEvent', async () => {
-      const webhooks = await webhookRepository.findActiveByEvent(tenantId, event);
+      const webhooks = await webhookConfigRepository.findByEvent(tenantId, event as never);
 
       if (webhooks.length === 0) {
         return;
@@ -162,7 +160,7 @@ export class WebhookService {
   }
 
   private async deliverWebhook(
-    webhook: Webhook,
+    webhook: WebhookConfig,
     event: string,
     payload: unknown
   ): Promise<void> {
@@ -203,28 +201,6 @@ export class WebhookService {
 
     const responseTime = Date.now() - startTime;
 
-    // Log delivery
-    await webhookRepository.logDelivery({
-      webhookId: webhook._id.toHexString(),
-      tenantId: webhook.tenantId,
-      event,
-      deliveryId,
-      success,
-      statusCode: statusCode ?? undefined,
-      responseTime,
-      error: errorMessage,
-      attempt: 1,
-      timestamp: new Date(),
-    });
-
-    // Update webhook stats
-    await webhookRepository.updateStats(webhook._id.toHexString(), webhook.tenantId, {
-      lastDeliveryAt: new Date(),
-      lastDeliveryStatus: success ? 'SUCCESS' : 'FAILED',
-      totalDeliveries: 1,
-      failedDeliveries: success ? 0 : 1,
-    });
-
     logger.info('Webhook delivered', {
       webhookId: webhook._id.toHexString(),
       event,
@@ -238,8 +214,9 @@ export class WebhookService {
     webhookId: string,
     tenantId: string,
     limit = 50
-  ): Promise<WebhookDeliveryType[]> {
-    return webhookRepository.getDeliveryHistory(webhookId, tenantId, limit);
+  ): Promise<WebhookDelivery[]> {
+    const result = await webhookDeliveryRepository.findByWebhook(webhookId, tenantId, { limit });
+    return result.data;
   }
 }
 

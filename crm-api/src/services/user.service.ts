@@ -4,10 +4,11 @@
 
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
-import { hash, compare } from 'bcrypt';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '@/config/index.js';
 import { auditLogRepository } from '@/repositories/audit-log.repository.js';
+import { UserRole } from '@/types/entities.js';
 
 const SALT_ROUNDS = 12;
 
@@ -18,7 +19,7 @@ interface User {
   passwordHash: string;
   firstName: string;
   lastName: string;
-  role: string;
+  role: UserRole;
   isActive: boolean;
   lastLoginAt: Date | null;
   createdAt: Date;
@@ -31,7 +32,7 @@ interface CreateUserData {
   password: string;
   firstName: string;
   lastName: string;
-  role?: string;
+  role?: UserRole;
 }
 
 interface AuthResult {
@@ -61,7 +62,7 @@ export class UserService {
         throw new Error('User with this email already exists');
       }
 
-      const passwordHash = await hash(data.password, SALT_ROUNDS);
+      const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
       const user: User = {
         _id: { toHexString: () => crypto.randomUUID() },
@@ -70,7 +71,7 @@ export class UserService {
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: data.role || 'SALES_REP',
+        role: data.role || UserRole.SALES_REP,
         isActive: true,
         lastLoginAt: null,
         createdAt: new Date(),
@@ -86,7 +87,7 @@ export class UserService {
         action: 'CREATE',
         actorId: createdBy,
         actorEmail: '',
-        changes: { new: { ...user, passwordHash: '[REDACTED]' } },
+        changes: { new: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
         metadata: {},
         requestId: '',
       });
@@ -111,7 +112,7 @@ export class UserService {
         throw new Error('Invalid credentials');
       }
 
-      const validPassword = await compare(password, user.passwordHash);
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
       if (!validPassword) {
         throw new Error('Invalid credentials');
       }
@@ -128,7 +129,7 @@ export class UserService {
           role: user.role,
         },
         config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN }
+        { expiresIn: config.JWT_EXPIRES_IN as string }
       );
 
       const refreshToken = jwt.sign(
@@ -137,7 +138,7 @@ export class UserService {
           type: 'refresh',
         },
         config.JWT_REFRESH_SECRET,
-        { expiresIn: config.JWT_REFRESH_EXPIRES_IN }
+        { expiresIn: config.JWT_REFRESH_EXPIRES_IN as string }
       );
 
       await auditLogRepository.log({
@@ -196,7 +197,7 @@ export class UserService {
           role: user.role,
         },
         config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN }
+        { expiresIn: config.JWT_EXPIRES_IN as string }
       );
 
       const newRefreshToken = jwt.sign(
@@ -205,7 +206,7 @@ export class UserService {
           type: 'refresh',
         },
         config.JWT_REFRESH_SECRET,
-        { expiresIn: config.JWT_REFRESH_EXPIRES_IN }
+        { expiresIn: config.JWT_REFRESH_EXPIRES_IN as string }
       );
 
       return {
@@ -229,7 +230,7 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    const oldUser = { ...user };
+    const oldData = { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role };
 
     if (updates.firstName) user.firstName = updates.firstName;
     if (updates.lastName) user.lastName = updates.lastName;
@@ -243,7 +244,7 @@ export class UserService {
       action: 'UPDATE',
       actorId: updatedBy,
       actorEmail: '',
-      changes: { old: { ...oldUser, passwordHash: '[REDACTED]' }, new: { ...user, passwordHash: '[REDACTED]' } },
+      changes: { old: oldData, new: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
       metadata: {},
       requestId: '',
     });

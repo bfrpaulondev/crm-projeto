@@ -6,6 +6,7 @@ import { attachmentRepository } from '@/repositories/attachment.repository.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 import { config } from '@/config/index.js';
+import { RelatedToType } from '@/types/entities.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -41,8 +42,8 @@ export class UploadService {
       mimetype: string;
       data: Buffer;
     },
-    _relatedToType?: string,
-    _relatedToId?: string
+    relatedToType?: string,
+    relatedToId?: string
   ): Promise<UploadResult> {
     return traceServiceOperation('UploadService', 'uploadFile', async () => {
       // Validate file size
@@ -66,15 +67,20 @@ export class UploadService {
       // Create attachment record
       const attachment = await attachmentRepository.create({
         tenantId,
-        filename: file.filename,
-        storedFilename: uniqueName,
+        fileName: file.filename,
+        originalName: file.filename,
         mimeType: file.mimetype,
         size: file.data.length,
-        path: filePath,
         url: `/uploads/${uniqueName}`,
-        relatedToType: null,
-        relatedToId: null,
+        storageType: 'LOCAL',
+        storageKey: uniqueName,
+        relatedToType: (relatedToType as RelatedToType) || RelatedToType.LEAD,
+        relatedToId: relatedToId || '',
         uploadedBy: userId,
+        description: null,
+        isAvatar: false,
+        metadata: null,
+        createdBy: userId,
       });
 
       logger.info('File uploaded', {
@@ -87,7 +93,7 @@ export class UploadService {
 
       return {
         id: attachment._id.toHexString(),
-        filename: file.filename,
+        filename: attachment.fileName,
         mimeType: file.mimetype,
         size: file.data.length,
         url: `/uploads/${uniqueName}`,
@@ -105,10 +111,11 @@ export class UploadService {
 
       // Delete file from disk
       try {
-        await fs.promises.unlink(attachment.path);
+        const filePath = path.join(this.uploadDir, attachment.storageKey);
+        await fs.promises.unlink(filePath);
       } catch (error) {
         logger.warn('Failed to delete file from disk', {
-          path: attachment.path,
+          storageKey: attachment.storageKey,
           error: String(error),
         });
       }
@@ -136,11 +143,12 @@ export class UploadService {
       return null;
     }
 
-    const data = await fs.promises.readFile(attachment.path);
+    const filePath = path.join(this.uploadDir, attachment.storageKey);
+    const data = await fs.promises.readFile(filePath);
 
     return {
       data,
-      filename: attachment.filename,
+      filename: attachment.fileName,
       mimeType: attachment.mimeType,
     };
   }
