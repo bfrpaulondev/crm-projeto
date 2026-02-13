@@ -57,11 +57,10 @@
     "@opentelemetry/sdk-node": "^0.50.0",
     "@opentelemetry/sdk-trace-node": "^1.23.0",
     "@opentelemetry/semantic-conventions": "^1.23.0",
-    "@pothos/core": "^3.30.0",
-    "@pothos/plugin-directives": "^3.16.0",
-    "@pothos/plugin-simple-objects": "^3.6.0",
-    "@pothos/plugin-with-input": "^3.11.0",
-    "@pothos/plugin-zod": "^3.11.0",
+    "@pothos/core": "^4.0.0",
+    "@pothos/plugin-simple-objects": "^4.0.0",
+    "@pothos/plugin-with-input": "^4.0.0",
+    "@pothos/plugin-zod": "^4.0.0",
     "dataloader": "^2.2.2",
     "dotenv": "^16.4.1",
     "fastify": "^4.26.0",
@@ -74,7 +73,7 @@
     "pino": "^8.18.0",
     "pino-pretty": "^10.3.1",
     "uuid": "^9.0.1",
-    "zod": "^3.22.4"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",

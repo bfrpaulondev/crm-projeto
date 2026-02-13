@@ -220,7 +220,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         updatedAt: now,
       } as unknown as T;
 
-      await collection.insertOne(document as unknown as Document);
+      await collection.insertOne(document as any);
 
       logger.debug(`Created ${this.collectionName}`, {
         id: (document as unknown as T)._id.toHexString(),
@@ -371,7 +371,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         updatedAt: now,
       })) as unknown as T[];
 
-      await collection.insertMany(docsToInsert as unknown as Document[]);
+      await collection.insertMany(docsToInsert as any);
 
       logger.debug(`Bulk inserted ${docsToInsert.length} ${this.collectionName} documents`);
 

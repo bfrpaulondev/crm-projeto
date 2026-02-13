@@ -2,21 +2,12 @@
 // GraphQL Context Types
 // =============================================================================
 
-import { UserRole, TenantSettings } from './entities.js';
+import { UserRole, TenantSettings, TenantPlan } from './entities.js';
 import { ObjectId } from 'mongodb';
 import DataLoader from 'dataloader';
 
-// Export TenantPlan for use in auth middleware
-export { TenantPlan } from './entities.js';
-
-// TenantPlan enum for use in context
-export const TenantPlan = {
-  STARTER: 'STARTER',
-  PROFESSIONAL: 'PROFESSIONAL',
-  ENTERPRISE: 'ENTERPRISE',
-} as const;
-
-export type TenantPlan = typeof TenantPlan[keyof typeof TenantPlan];
+// Re-export types for external use
+export { TenantPlan, UserRole } from './entities.js';
 
 /**
  * Utilizador autenticado no contexto
@@ -45,11 +36,11 @@ export interface ContextTenant {
  * DataLoaders disponíveis no contexto
  */
 export interface DataLoaders {
-  leadById: DataLoader<string, LeadLoaderResult, string>;
-  contactById: DataLoader<string, ContactLoaderResult, string>;
-  accountById: DataLoader<string, AccountLoaderResult, string>;
-  opportunityById: DataLoader<string, OpportunityLoaderResult, string>;
-  stageById: DataLoader<string, StageLoaderResult, string>;
+  leadById: DataLoader<string, LeadLoaderResult | null, string>;
+  contactById: DataLoader<string, ContactLoaderResult | null, string>;
+  accountById: DataLoader<string, AccountLoaderResult | null, string>;
+  opportunityById: DataLoader<string, OpportunityLoaderResult | null, string>;
+  stageById: DataLoader<string, StageLoaderResult | null, string>;
   contactsByAccountId: DataLoader<string, ContactLoaderResult[], string>;
   opportunitiesByAccountId: DataLoader<string, OpportunityLoaderResult[], string>;
   activitiesByRelatedTo: DataLoader<string, ActivityLoaderResult[], string>;

@@ -2,587 +2,257 @@
 // GraphQL Query Resolvers
 // =============================================================================
 
-import { builder } from '../builder.js';
+import { builder } from '../schema/builder.js';
 import { leadService } from '@/services/lead.service.js';
-import { webhookService } from '@/services/webhook.service.js';
 import { leadRepository } from '@/repositories/lead.repository.js';
 import { accountRepository } from '@/repositories/account.repository.js';
 import { contactRepository } from '@/repositories/contact.repository.js';
 import { opportunityRepository } from '@/repositories/opportunity.repository.js';
 import { stageRepository } from '@/repositories/stage.repository.js';
 import { Errors } from '@/types/errors.js';
-import { Permission } from '@/types/context.js';
-import {
-  LeadType,
-  LeadFilterInput,
-  LeadStatusEnum,
-  LeadSourceEnum,
-} from '../types/lead.js';
-import {
-  AccountGraphQLType,
-  ContactGraphQLType,
-  AccountFilterInput,
-  ContactFilterInput,
-} from '../types/account.js';
-import {
-  OpportunityGraphQLType,
-  StageType,
-  OpportunityFilterInput,
-  OpportunityStatusEnum,
-} from '../types/opportunity.js';
-import {
-  ActivityGraphQLType,
-  ActivityFilterInput,
-} from '../types/activity.js';
-import {
-  WebhookConfigType,
-  WebhookDeliveryType,
-  WebhookFilterInput,
-  WebhookDeliveryFilterInput,
-  WebhookConnectionType,
-  WebhookDeliveryConnectionType,
-  WebhookEventEnum,
-  WebhookEventCategoryType,
-} from '../types/webhook.js';
+import { Permission, GraphQLContext } from '@/types/context.js';
+import { Lead, Account, Contact, Opportunity, Stage } from '@/types/entities.js';
 
 // =============================================================================
-// Me Query
+// Object Types
+// =============================================================================
+
+const LeadType = builder.objectRef<Lead>('Lead');
+
+LeadType.implement({
+  fields: (t) => ({
+    id: t.field({
+      type: 'String',
+      nullable: false,
+      resolve: (lead) => lead._id.toHexString(),
+    }),
+    tenantId: t.exposeString('tenantId', { nullable: false }),
+    firstName: t.exposeString('firstName', { nullable: false }),
+    lastName: t.exposeString('lastName', { nullable: false }),
+    email: t.exposeString('email', { nullable: false }),
+    phone: t.exposeString('phone', { nullable: true }),
+    companyName: t.exposeString('companyName', { nullable: true }),
+    status: t.exposeString('status', { nullable: false }),
+    createdAt: t.field({
+      type: 'DateTime',
+      nullable: false,
+      resolve: (lead) => lead.createdAt,
+    }),
+  }),
+});
+
+const AccountType = builder.objectRef<Account>('Account');
+
+AccountType.implement({
+  fields: (t) => ({
+    id: t.field({
+      type: 'String',
+      nullable: false,
+      resolve: (account) => account._id.toHexString(),
+    }),
+    tenantId: t.exposeString('tenantId', { nullable: false }),
+    name: t.exposeString('name', { nullable: false }),
+    domain: t.exposeString('domain', { nullable: true }),
+    website: t.exposeString('website', { nullable: true }),
+    createdAt: t.field({
+      type: 'DateTime',
+      nullable: false,
+      resolve: (account) => account.createdAt,
+    }),
+  }),
+});
+
+const ContactType = builder.objectRef<Contact>('Contact');
+
+ContactType.implement({
+  fields: (t) => ({
+    id: t.field({
+      type: 'String',
+      nullable: false,
+      resolve: (contact) => contact._id.toHexString(),
+    }),
+    tenantId: t.exposeString('tenantId', { nullable: false }),
+    firstName: t.exposeString('firstName', { nullable: false }),
+    lastName: t.exposeString('lastName', { nullable: false }),
+    email: t.exposeString('email', { nullable: false }),
+    createdAt: t.field({
+      type: 'DateTime',
+      nullable: false,
+      resolve: (contact) => contact.createdAt,
+    }),
+  }),
+});
+
+const OpportunityType = builder.objectRef<Opportunity>('Opportunity');
+
+OpportunityType.implement({
+  fields: (t) => ({
+    id: t.field({
+      type: 'String',
+      nullable: false,
+      resolve: (opp) => opp._id.toHexString(),
+    }),
+    tenantId: t.exposeString('tenantId', { nullable: false }),
+    name: t.exposeString('name', { nullable: false }),
+    amount: t.exposeFloat('amount', { nullable: false }),
+    status: t.exposeString('status', { nullable: false }),
+    createdAt: t.field({
+      type: 'DateTime',
+      nullable: false,
+      resolve: (opp) => opp.createdAt,
+    }),
+  }),
+});
+
+const StageType = builder.objectRef<Stage>('Stage');
+
+StageType.implement({
+  fields: (t) => ({
+    id: t.field({
+      type: 'String',
+      nullable: false,
+      resolve: (stage) => stage._id.toHexString(),
+    }),
+    tenantId: t.exposeString('tenantId', { nullable: false }),
+    name: t.exposeString('name', { nullable: false }),
+    order: t.exposeInt('order', { nullable: false }),
+    probability: t.exposeInt('probability', { nullable: false }),
+  }),
+});
+
+// =============================================================================
+// Simple Types
 // =============================================================================
 
 const MeType = builder.simpleObject('Me', {
   fields: (t) => ({
     id: t.string({ nullable: false }),
     email: t.string({ nullable: false }),
-    firstName: t.string({ nullable: false }),
-    lastName: t.string({ nullable: false }),
     role: t.string({ nullable: false }),
     tenantId: t.string({ nullable: false }),
   }),
 });
 
 // =============================================================================
-// Queries
+// Query Fields
 // =============================================================================
 
-builder.queryType({
-  fields: (t) => ({
-    // Me query - retorna utilizador atual
-    me: t.field({
-      type: MeType,
-      nullable: true,
-      resolve: (_parent, _args, ctx) => {
-        if (!ctx.user) return null;
-
-        return {
-          id: ctx.user.id,
-          email: ctx.user.email,
-          firstName: '', // Would load from DB
-          lastName: '',
-          role: ctx.user.role,
-          tenantId: ctx.user.tenantId,
-        };
-      },
-    }),
-
-    // =========================================================================
-    // Lead Queries
-    // =========================================================================
-
-    lead: t.field({
-      type: LeadType,
-      nullable: true,
-      args: {
-        id: t.arg.string({ required: true }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.LEAD_READ)) {
-          throw Errors.insufficientPermissions('LEAD_READ');
-        }
-
-        return leadRepository.findById(args.id, ctx.tenant.id);
-      },
-    }),
-
-    leads: t.field({
-      type: 'PaginatedLeads', // Definido abaixo
-      nullable: false,
-      args: {
-        filter: t.arg({ type: LeadFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        after: t.arg.string({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.LEAD_READ)) {
-          throw Errors.insufficientPermissions('LEAD_READ');
-        }
-
-        const result = await leadRepository.findWithFilters(
-          ctx.tenant.id,
-          args.filter ? {
-            status: args.filter.status,
-            source: args.filter.source,
-            ownerId: args.filter.ownerId,
-            search: args.filter.search,
-            tags: args.filter.tags,
-            createdAfter: args.filter.createdAfter,
-            createdBefore: args.filter.createdBefore,
-            hasCompany: args.filter.hasCompany,
-            minScore: args.filter.minScore,
-          } : undefined,
-          { limit: args.first, cursor: args.after }
-        );
-
-        return {
-          edges: result.data.map((lead) => ({
-            node: lead,
-            cursor: lead._id.toHexString(),
-          })),
-          pageInfo: {
-            hasNextPage: result.hasNextPage,
-            hasPreviousPage: result.hasPreviousPage,
-            startCursor: result.startCursor,
-            endCursor: result.endCursor,
-            totalCount: result.totalCount,
-          },
-        };
-      },
-    }),
-
-    // =========================================================================
-    // Account Queries
-    // =========================================================================
-
-    account: t.field({
-      type: AccountGraphQLType,
-      nullable: true,
-      args: {
-        id: t.arg.string({ required: true }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.ACCOUNT_READ)) {
-          throw Errors.insufficientPermissions('ACCOUNT_READ');
-        }
-
-        return accountRepository.findById(args.id, ctx.tenant.id);
-      },
-    }),
-
-    accounts: t.field({
-      type: 'PaginatedAccounts',
-      nullable: false,
-      args: {
-        filter: t.arg({ type: AccountFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        after: t.arg.string({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.ACCOUNT_READ)) {
-          throw Errors.insufficientPermissions('ACCOUNT_READ');
-        }
-
-        const result = await accountRepository.findWithFilters(
-          ctx.tenant.id,
-          args.filter ? {
-            type: args.filter.type,
-            tier: args.filter.tier,
-            status: args.filter.status,
-            ownerId: args.filter.ownerId,
-            industry: args.filter.industry,
-            search: args.filter.search,
-          } : undefined,
-          { limit: args.first, cursor: args.after }
-        );
-
-        return {
-          edges: result.data.map((account) => ({
-            node: account,
-            cursor: account._id.toHexString(),
-          })),
-          pageInfo: {
-            hasNextPage: result.hasNextPage,
-            hasPreviousPage: result.hasPreviousPage,
-            startCursor: result.startCursor,
-            endCursor: result.endCursor,
-            totalCount: result.totalCount,
-          },
-        };
-      },
-    }),
-
-    // =========================================================================
-    // Contact Queries
-    // =========================================================================
-
-    contact: t.field({
-      type: ContactGraphQLType,
-      nullable: true,
-      args: {
-        id: t.arg.string({ required: true }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.CONTACT_READ)) {
-          throw Errors.insufficientPermissions('CONTACT_READ');
-        }
-
-        return contactRepository.findById(args.id, ctx.tenant.id);
-      },
-    }),
-
-    contacts: t.field({
-      type: 'PaginatedContacts',
-      nullable: false,
-      args: {
-        filter: t.arg({ type: ContactFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        after: t.arg.string({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.CONTACT_READ)) {
-          throw Errors.insufficientPermissions('CONTACT_READ');
-        }
-
-        const result = await contactRepository.findWithFilters(
-          ctx.tenant.id,
-          args.filter ? {
-            accountId: args.filter.accountId,
-            ownerId: args.filter.ownerId,
-            search: args.filter.search,
-            isPrimary: args.filter.isPrimary,
-            isDecisionMaker: args.filter.isDecisionMaker,
-          } : undefined,
-          { limit: args.first, cursor: args.after }
-        );
-
-        return {
-          edges: result.data.map((contact) => ({
-            node: contact,
-            cursor: contact._id.toHexString(),
-          })),
-          pageInfo: {
-            hasNextPage: result.hasNextPage,
-            hasPreviousPage: result.hasPreviousPage,
-            startCursor: result.startCursor,
-            endCursor: result.endCursor,
-            totalCount: result.totalCount,
-          },
-        };
-      },
-    }),
-
-    // =========================================================================
-    // Opportunity Queries
-    // =========================================================================
-
-    opportunity: t.field({
-      type: OpportunityGraphQLType,
-      nullable: true,
-      args: {
-        id: t.arg.string({ required: true }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.OPPORTUNITY_READ)) {
-          throw Errors.insufficientPermissions('OPPORTUNITY_READ');
-        }
-
-        return opportunityRepository.findById(args.id, ctx.tenant.id);
-      },
-    }),
-
-    opportunities: t.field({
-      type: 'PaginatedOpportunities',
-      nullable: false,
-      args: {
-        filter: t.arg({ type: OpportunityFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        after: t.arg.string({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.OPPORTUNITY_READ)) {
-          throw Errors.insufficientPermissions('OPPORTUNITY_READ');
-        }
-
-        const result = await opportunityRepository.findWithFilters(
-          ctx.tenant.id,
-          args.filter ? {
-            accountId: args.filter.accountId,
-            ownerId: args.filter.ownerId,
-            stageId: args.filter.stageId,
-            status: args.filter.status,
-            type: args.filter.type,
-            search: args.filter.search,
-            minAmount: args.filter.minAmount,
-            maxAmount: args.filter.maxAmount,
-            expectedCloseAfter: args.filter.expectedCloseAfter,
-            expectedCloseBefore: args.filter.expectedCloseBefore,
-          } : undefined,
-          { limit: args.first, cursor: args.after }
-        );
-
-        return {
-          edges: result.data.map((opp) => ({
-            node: opp,
-            cursor: opp._id.toHexString(),
-          })),
-          pageInfo: {
-            hasNextPage: result.hasNextPage,
-            hasPreviousPage: result.hasPreviousPage,
-            startCursor: result.startCursor,
-            endCursor: result.endCursor,
-            totalCount: result.totalCount,
-          },
-        };
-      },
-    }),
-
-    // =========================================================================
-    // Stage Queries
-    // =========================================================================
-
-    stages: t.field({
-      type: [StageType],
-      nullable: false,
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, _args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        return stageRepository.findActiveStages(ctx.tenant.id);
-      },
-    }),
-
-    // =========================================================================
-    // Webhook Queries
-    // =========================================================================
-
-    webhook: t.field({
-      type: WebhookConfigType,
-      nullable: true,
-      args: {
-        id: t.arg.string({ required: true }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.WEBHOOK_READ)) {
-          throw Errors.insufficientPermissions('WEBHOOK_READ');
-        }
-
-        try {
-          return await webhookService.getWebhook(args.id, ctx.tenant.id);
-        } catch {
-          return null;
-        }
-      },
-    }),
-
-    webhooks: t.field({
-      type: WebhookConnectionType,
-      nullable: false,
-      args: {
-        filter: t.arg({ type: WebhookFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        skip: t.arg.int({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.WEBHOOK_READ)) {
-          throw Errors.insufficientPermissions('WEBHOOK_READ');
-        }
-
-        return webhookService.listWebhooks(ctx.tenant.id, args.filter ? {
-          isActive: args.filter.isActive ?? undefined,
-          events: args.filter.events as import('@/types/webhook.js').WebhookEvent[] | undefined,
-        } : undefined, {
-          limit: args.first ?? 50,
-          skip: args.skip ?? 0,
-        });
-      },
-    }),
-
-    webhookDeliveries: t.field({
-      type: WebhookDeliveryConnectionType,
-      nullable: false,
-      args: {
-        filter: t.arg({ type: WebhookDeliveryFilterInput, required: false }),
-        first: t.arg.int({ required: false }),
-        skip: t.arg.int({ required: false }),
-      },
-      authScopes: {
-        authenticated: true,
-      },
-      resolve: async (_parent, args, ctx) => {
-        ctx.requireAuth();
-        ctx.requireTenant();
-
-        if (!ctx.hasPermission(Permission.WEBHOOK_READ)) {
-          throw Errors.insufficientPermissions('WEBHOOK_READ');
-        }
-
-        return webhookService.getAllDeliveryLogs(ctx.tenant.id, args.filter ? {
-          webhookId: args.filter.webhookId ?? undefined,
-          status: args.filter.status as import('@/types/webhook.js').WebhookDeliveryStatus | undefined,
-          event: args.filter.event as import('@/types/webhook.js').WebhookEvent | undefined,
-          startDate: args.filter.startDate ?? undefined,
-          endDate: args.filter.endDate ?? undefined,
-        } : undefined, {
-          limit: args.first ?? 50,
-          skip: args.skip ?? 0,
-        });
-      },
-    }),
-
-    webhookEvents: t.field({
-      type: [WebhookEventCategoryType],
-      nullable: false,
-      resolve: async () => {
-        const categories = [
-          { category: 'LEAD', events: import('@/types/webhook.js').WEBHOOK_EVENTS_BY_CATEGORY.LEAD },
-          { category: 'OPPORTUNITY', events: import('@/types/webhook.js').WEBHOOK_EVENTS_BY_CATEGORY.OPPORTUNITY },
-          { category: 'ACCOUNT', events: import('@/types/webhook.js').WEBHOOK_EVENTS_BY_CATEGORY.ACCOUNT },
-          { category: 'CONTACT', events: import('@/types/webhook.js').WEBHOOK_EVENTS_BY_CATEGORY.CONTACT },
-          { category: 'ACTIVITY', events: import('@/types/webhook.js').WEBHOOK_EVENTS_BY_CATEGORY.ACTIVITY },
-        ];
-        return categories;
-      },
-    }),
+builder.queryFields((t) => ({
+  me: t.field({
+    type: MeType,
+    nullable: true,
+    resolve: (_root, _args, ctx: GraphQLContext) => {
+      if (!ctx.user) return null;
+      return {
+        id: ctx.user.id,
+        email: ctx.user.email,
+        role: ctx.user.role,
+        tenantId: ctx.user.tenantId,
+      };
+    },
   }),
-});
 
-// =============================================================================
-// Pagination Types
-// =============================================================================
-
-// Lead Edge
-const LeadEdge = builder.simpleObject('LeadEdge', {
-  fields: (t) => ({
-    node: t.field({ type: LeadType, nullable: false }),
-    cursor: t.string({ nullable: false }),
+  lead: t.field({
+    type: LeadType,
+    nullable: true,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return leadRepository.findById(args.id, ctx.tenant.id);
+    },
   }),
-});
 
-// Lead Connection
-const PaginatedLeads = builder.simpleObject('PaginatedLeads', {
-  fields: (t) => ({
-    edges: t.field({ type: [LeadEdge], nullable: false }),
-    pageInfo: t.field({ type: 'PageInfo', nullable: false }),
+  leads: t.field({
+    type: [LeadType],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return leadRepository.findAll(ctx.tenant.id);
+    },
   }),
-});
 
-// Account Edge
-const AccountEdge = builder.simpleObject('AccountEdge', {
-  fields: (t) => ({
-    node: t.field({ type: AccountGraphQLType, nullable: false }),
-    cursor: t.string({ nullable: false }),
+  account: t.field({
+    type: AccountType,
+    nullable: true,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return accountRepository.findById(args.id, ctx.tenant.id);
+    },
   }),
-});
 
-// Account Connection
-const PaginatedAccounts = builder.simpleObject('PaginatedAccounts', {
-  fields: (t) => ({
-    edges: t.field({ type: [AccountEdge], nullable: false }),
-    pageInfo: t.field({ type: 'PageInfo', nullable: false }),
+  accounts: t.field({
+    type: [AccountType],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return accountRepository.findAll(ctx.tenant.id);
+    },
   }),
-});
 
-// Contact Edge
-const ContactEdge = builder.simpleObject('ContactEdge', {
-  fields: (t) => ({
-    node: t.field({ type: ContactGraphQLType, nullable: false }),
-    cursor: t.string({ nullable: false }),
+  contact: t.field({
+    type: ContactType,
+    nullable: true,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return contactRepository.findById(args.id, ctx.tenant.id);
+    },
   }),
-});
 
-// Contact Connection
-const PaginatedContacts = builder.simpleObject('PaginatedContacts', {
-  fields: (t) => ({
-    edges: t.field({ type: [ContactEdge], nullable: false }),
-    pageInfo: t.field({ type: 'PageInfo', nullable: false }),
+  contacts: t.field({
+    type: [ContactType],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return contactRepository.findAll(ctx.tenant.id);
+    },
   }),
-});
 
-// Opportunity Edge
-const OpportunityEdge = builder.simpleObject('OpportunityEdge', {
-  fields: (t) => ({
-    node: t.field({ type: OpportunityGraphQLType, nullable: false }),
-    cursor: t.string({ nullable: false }),
+  opportunity: t.field({
+    type: OpportunityType,
+    nullable: true,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return opportunityRepository.findById(args.id, ctx.tenant.id);
+    },
   }),
-});
 
-// Opportunity Connection
-const PaginatedOpportunities = builder.simpleObject('PaginatedOpportunities', {
-  fields: (t) => ({
-    edges: t.field({ type: [OpportunityEdge], nullable: false }),
-    pageInfo: t.field({ type: 'PageInfo', nullable: false }),
+  opportunities: t.field({
+    type: [OpportunityType],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return opportunityRepository.findAll(ctx.tenant.id);
+    },
   }),
-});
 
-export {
-  MeType,
-  LeadEdge,
-  PaginatedLeads,
-  AccountEdge,
-  PaginatedAccounts,
-  ContactEdge,
-  PaginatedContacts,
-  OpportunityEdge,
-  PaginatedOpportunities,
-};
+  stages: t.field({
+    type: [StageType],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      ctx.requireAuth();
+      ctx.requireTenant();
+      return stageRepository.findActiveStages(ctx.tenant.id);
+    },
+  }),
+}));
+
+export { LeadType, AccountType, ContactType, OpportunityType, StageType, MeType };

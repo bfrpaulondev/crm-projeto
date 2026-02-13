@@ -4,84 +4,80 @@
 
 import { builder } from '../schema/builder.js';
 import { reportingService } from '@/services/reporting.service.js';
+import { GraphQLContext } from '@/types/context.js';
 
-// Dashboard Stats Type
-builder.simpleObject('DashboardStats', {
+// =============================================================================
+// Types
+// =============================================================================
+
+const DashboardStats = builder.simpleObject('DashboardStats', {
   fields: (t) => ({
-    totalLeads: t.int(),
-    qualifiedLeads: t.int(),
-    convertedLeads: t.int(),
-    totalOpportunities: t.int(),
-    openOpportunities: t.int(),
-    totalPipelineValue: t.float(),
-    wonValue: t.float(),
-    lostValue: t.float(),
+    totalLeads: t.int({ nullable: false }),
+    qualifiedLeads: t.int({ nullable: false }),
+    convertedLeads: t.int({ nullable: false }),
+    totalOpportunities: t.int({ nullable: false }),
+    openOpportunities: t.int({ nullable: false }),
+    totalPipelineValue: t.float({ nullable: false }),
+    wonValue: t.float({ nullable: false }),
+    lostValue: t.float({ nullable: false }),
   }),
 });
 
-// Pipeline By Stage
-builder.simpleObject('PipelineStageStats', {
+const LeadSourceStats = builder.simpleObject('LeadSourceStats', {
   fields: (t) => ({
-    stageId: t.string(),
-    stageName: t.string(),
-    count: t.int(),
-    value: t.float(),
-    probability: t.int(),
+    source: t.string({ nullable: false }),
+    total: t.int({ nullable: false }),
+    converted: t.int({ nullable: false }),
+    conversionRate: t.float({ nullable: false }),
   }),
 });
 
-// Lead Source Stats
-builder.simpleObject('LeadSourceStats', {
+const ActivityStats = builder.simpleObject('ActivityStats', {
   fields: (t) => ({
-    source: t.string(),
-    total: t.int(),
-    converted: t.int(),
-    conversionRate: t.float(),
+    type: t.string({ nullable: false }),
+    count: t.int({ nullable: false }),
+    completed: t.int({ nullable: false }),
   }),
 });
 
-// Activity Stats
-builder.simpleObject('ActivityStats', {
-  fields: (t) => ({
-    type: t.string(),
-    count: t.int(),
-    completed: t.int(),
+// =============================================================================
+// Queries
+// =============================================================================
+
+builder.queryFields((t) => ({
+  dashboard: t.field({
+    type: DashboardStats,
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      if (!ctx.tenant) {
+        throw new Error('Tenant required');
+      }
+      const stats = await reportingService.getDashboardStats(ctx.tenant.id);
+      return stats;
+    },
   }),
-});
 
-// Dashboard Query
-builder.queryField('dashboard', (t) => ({
-  type: 'DashboardStats',
-  resolve: async (_parent, _args, ctx) => {
-    if (!ctx.tenant) {
-      throw new Error('Tenant required');
-    }
-    return reportingService.getDashboardStats(ctx.tenant.id);
-  },
-}));
+  leadConversionStats: t.field({
+    type: [LeadSourceStats],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      if (!ctx.tenant) {
+        throw new Error('Tenant required');
+      }
+      const stats = await reportingService.getLeadConversionStats(ctx.tenant.id);
+      return stats.bySource;
+    },
+  }),
 
-// Lead Conversion Stats Query
-builder.queryField('leadConversionStats', (t) => ({
-  type: 'LeadSourceStats',
-  list: true,
-  resolve: async (_parent, _args, ctx) => {
-    if (!ctx.tenant) {
-      throw new Error('Tenant required');
-    }
-    const stats = await reportingService.getLeadConversionStats(ctx.tenant.id);
-    return stats.bySource;
-  },
-}));
-
-// Activity Stats Query
-builder.queryField('activityStats', (t) => ({
-  type: 'ActivityStats',
-  list: true,
-  resolve: async (_parent, _args, ctx) => {
-    if (!ctx.tenant) {
-      throw new Error('Tenant required');
-    }
-    const stats = await reportingService.getActivityStats(ctx.tenant.id);
-    return stats.byType;
-  },
+  activityStats: t.field({
+    type: [ActivityStats],
+    nullable: false,
+    resolve: async (_root, _args, ctx: GraphQLContext) => {
+      if (!ctx.tenant) {
+        throw new Error('Tenant required');
+      }
+      const stats = await reportingService.getActivityStats(ctx.tenant.id);
+      return stats.byType;
+    },
+  }),
 }));

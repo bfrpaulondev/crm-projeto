@@ -96,9 +96,9 @@ export class AccountRepository extends BaseRepository<Account> {
       }, {} as Record<string, number>);
 
     return {
-      byType: toRecord(byType),
-      byTier: toRecord(byTier),
-      byStatus: toRecord(byStatus),
+      byType: toRecord(byType as Array<{ _id: string | null; count: number }>),
+      byTier: toRecord(byTier as Array<{ _id: string | null; count: number }>),
+      byStatus: toRecord(byStatus as Array<{ _id: string | null; count: number }>),
     };
   }
 }

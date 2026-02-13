@@ -1,5 +1,5 @@
 // =============================================================================
-// GraphQL Schema Builder with Pothos
+// GraphQL Schema Builder with Pothos v4
 // =============================================================================
 
 import SchemaBuilder from '@pothos/core';
@@ -7,7 +7,7 @@ import SimpleObjectsPlugin from '@pothos/plugin-simple-objects';
 import ZodPlugin from '@pothos/plugin-zod';
 import WithInputPlugin from '@pothos/plugin-with-input';
 import { GraphQLContext } from '@/types/context.js';
-import { DateTimeResolver, EmailResolver } from 'graphql-scalars';
+import { DateTimeResolver } from 'graphql-scalars';
 
 // =============================================================================
 // Builder Setup
@@ -18,13 +18,10 @@ export const builder = new SchemaBuilder<{
   Scalars: {
     ID: { Input: string; Output: string };
     DateTime: { Input: Date; Output: Date };
-    Email: { Input: string; Output: string };
   };
 }>({
   plugins: [SimpleObjectsPlugin, ZodPlugin, WithInputPlugin],
-  zod: {
-    validate: true,
-  },
+  notStrict: "Pothos may not work correctly when strict mode is not enabled in tsconfig.json" as const,
 });
 
 // =============================================================================
@@ -34,11 +31,6 @@ export const builder = new SchemaBuilder<{
 builder.scalarType('DateTime', {
   serialize: (n) => DateTimeResolver.serialize(n),
   parseValue: (n) => DateTimeResolver.parseValue(n),
-});
-
-builder.scalarType('Email', {
-  serialize: (n) => EmailResolver.serialize(n),
-  parseValue: (n) => EmailResolver.parseValue(n),
 });
 
 // =============================================================================
@@ -81,14 +73,6 @@ builder.simpleObject('FieldError', {
   fields: (t) => ({
     field: t.string(),
     message: t.string(),
-  }),
-});
-
-// AuthResult
-builder.simpleObject('AuthResult', {
-  fields: (t) => ({
-    accessToken: t.string(),
-    refreshToken: t.string(),
   }),
 });
 

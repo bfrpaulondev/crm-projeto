@@ -29,13 +29,6 @@ import { Permission, ROLE_PERMISSIONS } from './types/context.js';
 import * as path from 'path';
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
-// Import schema types to register them
-import './graphql/schema/types/lead.js';
-import './graphql/schema/types/opportunity.js';
-import './graphql/schema/types/account.js';
-import './graphql/schema/types/activity.js';
-import './graphql/schema/types/webhook.js';
-
 // Import resolvers
 import './graphql/resolvers/index.js';
 import './graphql/resolvers/mutations.js';
