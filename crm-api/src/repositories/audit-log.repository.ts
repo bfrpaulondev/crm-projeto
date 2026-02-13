@@ -14,7 +14,7 @@ export interface CreateAuditLogInput {
   action: AuditAction | string;
   actorId: string;
   actorEmail: string;
-  changes: Record<string, { old?: unknown; new?: unknown }> | null;
+  changes: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
   requestId: string;
 }
@@ -53,7 +53,7 @@ export class AuditLogRepository {
         action: input.action as AuditAction,
         actorId: input.actorId,
         actorEmail: input.actorEmail,
-        changes: input.changes,
+        changes: input.changes as Record<string, { old: unknown; new: unknown }>,
         metadata: input.metadata,
         requestId: input.requestId,
         createdAt: new Date(),
@@ -135,9 +135,10 @@ export class AuditLogRepository {
       if (filters?.action) query.action = filters.action;
 
       if (filters?.startDate || filters?.endDate) {
-        query.createdAt = {};
-        if (filters.startDate) (query.createdAt as Record<string, unknown>).$gte = filters.startDate;
-        if (filters.endDate) (query.createdAt as Record<string, unknown>).$lte = filters.endDate;
+        const dateFilter: Record<string, unknown> = {};
+        if (filters.startDate) dateFilter.$gte = filters.startDate;
+        if (filters.endDate) dateFilter.$lte = filters.endDate;
+        query.createdAt = dateFilter;
       }
 
       return collection
@@ -162,9 +163,10 @@ export class AuditLogRepository {
 
       const matchStage: Record<string, unknown> = { tenantId };
       if (startDate || endDate) {
-        matchStage.createdAt = {};
-        if (startDate) matchStage.createdAt.$gte = startDate;
-        if (endDate) matchStage.createdAt.$lte = endDate;
+        const dateFilter: Record<string, unknown> = {};
+        if (startDate) dateFilter.$gte = startDate;
+        if (endDate) dateFilter.$lte = endDate;
+        matchStage.createdAt = dateFilter;
       }
 
       const [totalResult, byActionResult, byEntityTypeResult] = await Promise.all([
@@ -185,12 +187,12 @@ export class AuditLogRepository {
 
       const byAction: Record<string, number> = {};
       for (const item of byActionResult) {
-        byAction[item._id ?? 'UNKNOWN'] = item.count;
+        byAction[String(item._id ?? 'UNKNOWN')] = item.count;
       }
 
       const byEntityType: Record<string, number> = {};
       for (const item of byEntityTypeResult) {
-        byEntityType[item._id ?? 'UNKNOWN'] = item.count;
+        byEntityType[String(item._id ?? 'UNKNOWN')] = item.count;
       }
 
       return {

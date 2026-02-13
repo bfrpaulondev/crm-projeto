@@ -6,7 +6,7 @@ import { attachmentRepository } from '@/repositories/attachment.repository.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 import { config } from '@/config/index.js';
-import { RelatedToType } from '@/types/entities.js';
+import { StorageType, RelatedToType } from '@/types/entities.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -64,6 +64,12 @@ export class UploadService {
       // Save file
       await fs.promises.writeFile(filePath, file.data);
 
+      // Determine relatedToType
+      let relatedType = RelatedToType.LEAD;
+      if (relatedToType === 'CONTACT') relatedType = RelatedToType.CONTACT;
+      else if (relatedToType === 'ACCOUNT') relatedType = RelatedToType.ACCOUNT;
+      else if (relatedToType === 'OPPORTUNITY') relatedType = RelatedToType.OPPORTUNITY;
+
       // Create attachment record
       const attachment = await attachmentRepository.create({
         tenantId,
@@ -72,9 +78,9 @@ export class UploadService {
         mimeType: file.mimetype,
         size: file.data.length,
         url: `/uploads/${uniqueName}`,
-        storageType: 'LOCAL',
+        storageType: StorageType.LOCAL,
         storageKey: uniqueName,
-        relatedToType: (relatedToType as RelatedToType) || RelatedToType.LEAD,
+        relatedToType: relatedType,
         relatedToId: relatedToId || '',
         uploadedBy: userId,
         description: null,
@@ -123,10 +129,7 @@ export class UploadService {
       // Delete from database
       await attachmentRepository.deleteById(id, tenantId);
 
-      logger.info('File deleted', {
-        attachmentId: id,
-        tenantId,
-      });
+      logger.info('File deleted', { attachmentId: id, tenantId });
 
       return true;
     });

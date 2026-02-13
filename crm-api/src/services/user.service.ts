@@ -5,7 +5,7 @@
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { config } from '@/config/index.js';
 import { auditLogRepository } from '@/repositories/audit-log.repository.js';
 import { UserRole } from '@/types/entities.js';
@@ -87,7 +87,7 @@ export class UserService {
         action: 'CREATE',
         actorId: createdBy,
         actorEmail: '',
-        changes: { new: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
+        changes: { created: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
         metadata: {},
         requestId: '',
       });
@@ -129,7 +129,7 @@ export class UserService {
           role: user.role,
         },
         config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN as string }
+        { expiresIn: '15m' }
       );
 
       const refreshToken = jwt.sign(
@@ -138,7 +138,7 @@ export class UserService {
           type: 'refresh',
         },
         config.JWT_REFRESH_SECRET,
-        { expiresIn: config.JWT_REFRESH_EXPIRES_IN as string }
+        { expiresIn: '7d' }
       );
 
       await auditLogRepository.log({
@@ -197,7 +197,7 @@ export class UserService {
           role: user.role,
         },
         config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRES_IN as string }
+        { expiresIn: '15m' }
       );
 
       const newRefreshToken = jwt.sign(
@@ -206,7 +206,7 @@ export class UserService {
           type: 'refresh',
         },
         config.JWT_REFRESH_SECRET,
-        { expiresIn: config.JWT_REFRESH_EXPIRES_IN as string }
+        { expiresIn: '7d' }
       );
 
       return {
@@ -244,7 +244,7 @@ export class UserService {
       action: 'UPDATE',
       actorId: updatedBy,
       actorEmail: '',
-      changes: { old: oldData, new: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
+      changes: { previous: oldData, current: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } },
       metadata: {},
       requestId: '',
     });

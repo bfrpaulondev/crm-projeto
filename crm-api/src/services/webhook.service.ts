@@ -3,14 +3,14 @@
 // =============================================================================
 
 import { webhookConfigRepository, webhookDeliveryRepository } from '@/repositories/webhook.repository.js';
-import { WebhookConfig, WebhookDelivery } from '@/types/webhook.js';
+import { WebhookConfig, WebhookDelivery, WebhookEvent, UpdateWebhookInput } from '@/types/webhook.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 
 interface CreateWebhookInput {
   name: string;
   url: string;
-  events: string[];
+  events: WebhookEvent[];
   secret?: string;
   isActive?: boolean;
 }
@@ -64,13 +64,16 @@ export class WebhookService {
     updates: Partial<CreateWebhookInput>
   ): Promise<WebhookConfig | null> {
     return traceServiceOperation('WebhookService', 'update', async () => {
-      const webhook = await webhookConfigRepository.updateById(id, tenantId, updates);
+      const updateInput: UpdateWebhookInput = {};
+      if (updates.name !== undefined) updateInput.name = updates.name;
+      if (updates.url !== undefined) updateInput.url = updates.url;
+      if (updates.events !== undefined) updateInput.events = updates.events;
+      if (updates.isActive !== undefined) updateInput.isActive = updates.isActive;
+
+      const webhook = await webhookConfigRepository.updateById(id, tenantId, updateInput);
 
       if (webhook) {
-        logger.info('Webhook updated', {
-          webhookId: id,
-          tenantId,
-        });
+        logger.info('Webhook updated', { webhookId: id, tenantId });
       }
 
       return webhook;
@@ -82,10 +85,7 @@ export class WebhookService {
       const deleted = await webhookConfigRepository.deleteById(id, tenantId);
 
       if (deleted) {
-        logger.info('Webhook deleted', {
-          webhookId: id,
-          tenantId,
-        });
+        logger.info('Webhook deleted', { webhookId: id, tenantId });
       }
 
       return deleted;
@@ -145,7 +145,7 @@ export class WebhookService {
     payload: unknown
   ): Promise<void> {
     return traceServiceOperation('WebhookService', 'triggerEvent', async () => {
-      const webhooks = await webhookConfigRepository.findByEvent(tenantId, event as never);
+      const webhooks = await webhookConfigRepository.findByEvent(tenantId, event as WebhookEvent);
 
       if (webhooks.length === 0) {
         return;
@@ -169,7 +169,7 @@ export class WebhookService {
 
     let success = false;
     let statusCode: number | undefined;
-    let errorMessage: string | undefined;
+    let error: string | undefined;
 
     try {
       const response = await fetch(webhook.url, {
@@ -193,10 +193,10 @@ export class WebhookService {
       statusCode = response.status;
 
       if (!response.ok) {
-        errorMessage = `HTTP ${response.status}`;
+        error = `HTTP ${response.status}`;
       }
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unknown error';
     }
 
     const responseTime = Date.now() - startTime;
@@ -207,6 +207,7 @@ export class WebhookService {
       success,
       statusCode,
       responseTime,
+      error,
     });
   }
 

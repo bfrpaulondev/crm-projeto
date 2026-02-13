@@ -2,7 +2,7 @@
 // Base Repository - Common MongoDB Operations
 // =============================================================================
 
-import { Db, ObjectId, Filter, Sort, FindOptions, UpdateFilter, Document } from 'mongodb';
+import { Db, ObjectId, Filter, Sort, FindOptions, UpdateFilter, Document, ClientSession } from 'mongodb';
 import { getDb, getClient } from '@/infrastructure/mongo/connection.js';
 import { BaseEntity } from '@/types/entities.js';
 import { traceRepositoryOperation } from '@/infrastructure/otel/tracing.js';
@@ -80,7 +80,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         deletedAt: null,
       } as Filter<T>);
 
-      return result;
+      return result as T | null;
     });
   }
 
@@ -97,7 +97,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         deletedAt: null,
       } as Filter<T>);
 
-      return result;
+      return result as T | null;
     });
   }
 
@@ -111,7 +111,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
       const { limit = 20, cursor } = pagination;
 
       // Build query filter
-      const queryFilter: Filter<T> = {
+      const queryFilter: Record<string, unknown> = {
         ...filter,
         tenantId,
         deletedAt: null,
@@ -120,11 +120,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
       // Cursor-based pagination
       if (cursor) {
         const cursorId = new ObjectId(cursor);
-        (queryFilter as Record<string, unknown>)._id = { $lt: cursorId };
+        queryFilter._id = { $lt: cursorId };
       }
 
       // Count total
-      const totalCount = await collection.countDocuments(queryFilter);
+      const totalCount = await collection.countDocuments(queryFilter as Filter<T>);
 
       // Find with pagination
       const findOptions: FindOptions = {
@@ -136,8 +136,9 @@ export abstract class BaseRepository<T extends BaseEntity> {
         findOptions.projection = projection;
       }
 
-      const cursor_result = collection.find(queryFilter, findOptions);
-      const data = await cursor_result.toArray();
+      const cursorResult = collection.find(queryFilter as Filter<T>, findOptions);
+      const rawData = await cursorResult.toArray();
+      const data = rawData as T[];
 
       // Check if there's a next page
       const hasNextPage = data.length > limit;
@@ -145,13 +146,16 @@ export abstract class BaseRepository<T extends BaseEntity> {
         data.pop(); // Remove the extra item
       }
 
+      const firstItem = data[0] as T | undefined;
+      const lastItem = data[data.length - 1] as T | undefined;
+
       return {
         data,
         totalCount,
         hasNextPage,
         hasPreviousPage: !!cursor,
-        startCursor: data.length > 0 ? data[0]._id.toHexString() : null,
-        endCursor: data.length > 0 ? data[data.length - 1]._id.toHexString() : null,
+        startCursor: firstItem ? firstItem._id.toHexString() : null,
+        endCursor: lastItem ? lastItem._id.toHexString() : null,
       };
     });
   }
@@ -163,13 +167,14 @@ export abstract class BaseRepository<T extends BaseEntity> {
     return traceRepositoryOperation(this.collectionName, 'findAll', async () => {
       const collection = this.getCollection();
 
-      const queryFilter: Filter<T> = {
+      const queryFilter: Record<string, unknown> = {
         ...filter,
         tenantId,
         deletedAt: null,
       };
 
-      return collection.find(queryFilter).toArray();
+      const result = await collection.find(queryFilter as Filter<T>).toArray();
+      return result as T[];
     });
   }
 
@@ -213,13 +218,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
         _id: new ObjectId(),
         createdAt: now,
         updatedAt: now,
-      } as T;
+      } as unknown as T;
 
-      await collection.insertOne(document as Document);
+      await collection.insertOne(document as unknown as Document);
 
       logger.debug(`Created ${this.collectionName}`, {
-        id: document._id.toHexString(),
-        tenantId: document.tenantId,
+        id: (document as unknown as T)._id.toHexString(),
+        tenantId: (document as unknown as T).tenantId,
       });
 
       return document;
@@ -249,7 +254,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
 
       const result = await collection.findOneAndUpdate(
         { _id, tenantId, deletedAt: null } as Filter<T>,
-        updateDoc as UpdateFilter<T>,
+        updateDoc as unknown as UpdateFilter<T>,
         { returnDocument: 'after' }
       );
 
@@ -260,7 +265,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         });
       }
 
-      return result;
+      return result as T | null;
     });
   }
 
@@ -284,7 +289,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
 
       const result = await collection.updateMany(
         { ...filter, tenantId, deletedAt: null } as Filter<T>,
-        updateDoc as UpdateFilter<T>
+        updateDoc as unknown as UpdateFilter<T>
       );
 
       logger.debug(`Updated ${result.modifiedCount} ${this.collectionName} documents`);
@@ -309,7 +314,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
             updatedAt: new Date(),
             updatedBy: userId,
           },
-        }
+        } as unknown as UpdateFilter<T>
       );
 
       if (result.modifiedCount > 0) {
@@ -364,9 +369,9 @@ export abstract class BaseRepository<T extends BaseEntity> {
         _id: new ObjectId(),
         createdAt: now,
         updatedAt: now,
-      })) as T[];
+      })) as unknown as T[];
 
-      await collection.insertMany(docsToInsert as Document[]);
+      await collection.insertMany(docsToInsert as unknown as Document[]);
 
       logger.debug(`Bulk inserted ${docsToInsert.length} ${this.collectionName} documents`);
 
@@ -378,7 +383,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
    * Transaction support
    */
   protected async withTransaction<R>(
-    callback: (session: import('mongodb').ClientSession) => Promise<R>
+    callback: (session: ClientSession) => Promise<R>
   ): Promise<R> {
     const client = getClient();
     const session = client.startSession();

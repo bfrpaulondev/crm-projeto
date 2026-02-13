@@ -5,7 +5,6 @@
 import { leadRepository } from '@/repositories/lead.repository.js';
 import { opportunityRepository } from '@/repositories/opportunity.repository.js';
 import { auditLogRepository } from '@/repositories/audit-log.repository.js';
-import { Lead, Opportunity } from '@/types/entities.js';
 import { logger } from '@/infrastructure/logging/index.js';
 import { traceServiceOperation } from '@/infrastructure/otel/tracing.js';
 
@@ -59,7 +58,7 @@ export class BulkOperationsService {
               action: 'UPDATE',
               actorId: userId,
               actorEmail: '',
-              changes: { old: lead, new: updatedLead },
+              changes: { previous: lead, current: updatedLead },
               metadata: { bulk: true },
               requestId: '',
             });
@@ -113,7 +112,7 @@ export class BulkOperationsService {
               action: 'DELETE',
               actorId: userId,
               actorEmail: '',
-              changes: { old: lead },
+              changes: { deleted: lead },
               metadata: { bulk: true },
               requestId: '',
             });
@@ -176,7 +175,7 @@ export class BulkOperationsService {
               action: 'UPDATE',
               actorId: userId,
               actorEmail: '',
-              changes: { old: opportunity, new: updatedOpp },
+              changes: { previous: opportunity, current: updatedOpp },
               metadata: { bulk: true },
               requestId: '',
             });
@@ -230,7 +229,7 @@ export class BulkOperationsService {
               action: 'DELETE',
               actorId: userId,
               actorEmail: '',
-              changes: { old: opportunity },
+              changes: { deleted: opportunity },
               metadata: { bulk: true },
               requestId: '',
             });

@@ -50,8 +50,6 @@ export class LeadService {
 
   /**
    * Create a new lead
-   * - Validates email uniqueness
-   * - Sets default values
    */
   async create(
     tenantId: string,
@@ -97,7 +95,7 @@ export class LeadService {
         action: 'CREATE',
         actorId: userId,
         actorEmail: '',
-        changes: { new: lead },
+        changes: { created: lead },
         metadata: { requestId },
         requestId,
       });
@@ -181,7 +179,7 @@ export class LeadService {
         action: 'UPDATE',
         actorId: userId,
         actorEmail: '',
-        changes: { old: existingLead, new: updatedLead },
+        changes: { previous: existingLead, current: updatedLead },
         metadata: { requestId },
         requestId,
       });
@@ -210,7 +208,7 @@ export class LeadService {
           action: 'DELETE',
           actorId: userId,
           actorEmail: '',
-          changes: { old: lead },
+          changes: { deleted: lead },
           metadata: { requestId },
           requestId,
         });
@@ -226,7 +224,6 @@ export class LeadService {
 
   /**
    * Qualify a lead
-   * - Validates minimum fields for qualification
    */
   async qualify(
     id: string,
@@ -241,7 +238,6 @@ export class LeadService {
         throw Errors.notFound('Lead', id);
       }
 
-      // Validar estado atual
       if (lead.status === LeadStatus.CONVERTED) {
         throw Errors.leadAlreadyConverted(id);
       }
@@ -250,20 +246,6 @@ export class LeadService {
         throw Errors.badUserInput('Lead is already qualified');
       }
 
-      // Validar campos mínimos para qualificação
-      const validationErrors: string[] = [];
-      if (!lead.email) validationErrors.push('email is required');
-      if (!lead.firstName) validationErrors.push('firstName is required');
-      if (!lead.lastName) validationErrors.push('lastName is required');
-
-      if (validationErrors.length > 0) {
-        throw Errors.badUserInput(
-          'Lead cannot be qualified. Missing required fields',
-          { errors: validationErrors }
-        );
-      }
-
-      // Atualizar status
       const updateData: Partial<Lead> = {
         status: LeadStatus.QUALIFIED,
         qualifiedAt: new Date(),
@@ -279,7 +261,6 @@ export class LeadService {
         throw Errors.internal('Failed to qualify lead');
       }
 
-      // Log de auditoria
       await this.auditRepo.log({
         tenantId,
         entityType: 'Lead',
@@ -287,16 +268,12 @@ export class LeadService {
         action: 'UPDATE',
         actorId: userId,
         actorEmail: '',
-        changes: { old: lead, new: qualifiedLead },
+        changes: { previous: lead, current: qualifiedLead },
         metadata: { action: 'QUALIFY', requestId },
         requestId: requestId || '',
       });
 
-      logger.info('Lead qualified', {
-        leadId: id,
-        tenantId,
-        userId,
-      });
+      logger.info('Lead qualified', { leadId: id, tenantId, userId });
 
       return qualifiedLead;
     });
@@ -304,8 +281,6 @@ export class LeadService {
 
   /**
    * Convert lead to Contact + Account + Opportunity
-   * - Idempotent operation using idempotencyKey
-   * - Uses MongoDB transaction for atomicity (if available)
    */
   async convert(
     tenantId: string,
@@ -331,7 +306,6 @@ export class LeadService {
             leadId: input.leadId,
             idempotencyKey: input.idempotencyKey,
           });
-          // Retornar resultado existente
           return existingResult as ReturnType<LeadService['convert']> extends Promise<infer T> ? T : never;
         }
       }
@@ -346,7 +320,6 @@ export class LeadService {
         throw Errors.leadAlreadyConverted(input.leadId);
       }
 
-      // 3. Validar qualificação (opcional - pode ser flexibilizado)
       if (lead.status !== LeadStatus.QUALIFIED && lead.status !== LeadStatus.CONTACTED) {
         throw Errors.badUserInput(
           'Lead must be contacted or qualified before conversion',
@@ -354,8 +327,8 @@ export class LeadService {
         );
       }
 
-      // 4. Criar Account
-      const accountData: Omit<Account, 'createdAt' | 'updatedAt' | '_id'> = {
+      // 3. Criar Account
+      const account = await this.accountRepo.create({
         tenantId,
         ownerId: lead.ownerId,
         name: input.accountName || lead.companyName || `${lead.firstName} ${lead.lastName}'s Company`,
@@ -372,12 +345,10 @@ export class LeadService {
         status: AccountStatus.ACTIVE,
         parentAccountId: null,
         createdBy: userId,
-      };
+      });
 
-      const account = await this.accountRepo.create(accountData);
-
-      // Criar Contact
-      const contactData: Omit<Contact, 'createdAt' | 'updatedAt' | '_id'> = {
+      // 4. Criar Contact
+      const contact = await this.contactRepo.create({
         tenantId,
         accountId: account._id.toHexString(),
         ownerId: lead.ownerId,
@@ -393,15 +364,12 @@ export class LeadService {
         isDecisionMaker: false,
         preferences: null,
         createdBy: userId,
-      };
+      });
 
-      const contact = await this.contactRepo.create(contactData);
-
-      // Criar Opportunity (se solicitado)
+      // 5. Criar Opportunity (se solicitado)
       let opportunity: Opportunity | null = null;
 
       if (input.createOpportunity) {
-        // Buscar primeiro stage ativo do tenant
         const stages = await this.stageRepo.findActiveStages(tenantId);
         const firstStage = stages[0];
 
@@ -411,7 +379,7 @@ export class LeadService {
           );
         }
 
-        const opportunityData: Omit<Opportunity, 'createdAt' | 'updatedAt' | '_id'> = {
+        opportunity = await this.opportunityRepo.create({
           tenantId,
           accountId: account._id.toHexString(),
           contactId: contact._id.toHexString(),
@@ -431,12 +399,10 @@ export class LeadService {
           competitorInfo: null,
           timeline: [],
           createdBy: userId,
-        };
-
-        opportunity = await this.opportunityRepo.create(opportunityData);
+        });
       }
 
-      // 5. Marcar lead como convertido
+      // 6. Marcar lead como convertido
       const convertedLead = await this.leadRepo.convert(
         input.leadId,
         tenantId,
@@ -452,7 +418,7 @@ export class LeadService {
         throw Errors.internal('Failed to update lead after conversion');
       }
 
-      // 6. Log de auditoria
+      // 7. Log de auditoria
       await this.auditRepo.log({
         tenantId,
         entityType: 'Lead',
@@ -460,27 +426,19 @@ export class LeadService {
         action: 'CONVERT',
         actorId: userId,
         actorEmail: '',
-        changes: {
-          old: lead,
-          new: convertedLead,
-        },
-        metadata: { requestId, contactId: contact._id.toHexString(), accountId: account._id.toHexString() },
+        changes: { converted: lead, to: { contactId: contact._id.toHexString(), accountId: account._id.toHexString() } },
+        metadata: { requestId },
         requestId,
       });
 
-      // 7. Guardar resultado para idempotência
+      // 8. Guardar resultado para idempotência
       if (input.idempotencyKey) {
         await createIdempotencyKey(
           tenantId,
           'convert_lead',
           input.idempotencyKey,
-          {
-            lead: convertedLead,
-            contact,
-            account,
-            opportunity,
-          },
-          86400 // 24 horas
+          { lead: convertedLead, contact, account, opportunity },
+          86400
         );
       }
 
@@ -493,12 +451,7 @@ export class LeadService {
         opportunityId: opportunity?._id.toHexString(),
       });
 
-      return {
-        lead: convertedLead,
-        contact,
-        account,
-        opportunity,
-      };
+      return { lead: convertedLead, contact, account, opportunity };
     });
   }
 
@@ -506,9 +459,6 @@ export class LeadService {
   // Statistics
   // ===========================================================================
 
-  /**
-   * Get lead statistics for tenant
-   */
   async getStatistics(tenantId: string) {
     return traceServiceOperation('LeadService', 'getStatistics', async () => {
       const [countsByStatus, countsBySource, total] = await Promise.all([
@@ -526,8 +476,7 @@ export class LeadService {
   }
 }
 
-// Dependencies - criadas inline por simplicidade
-// Em produção, usar DI container
+// Dependencies
 import { accountRepository } from '@/repositories/account.repository.js';
 import { contactRepository } from '@/repositories/contact.repository.js';
 import { opportunityRepository } from '@/repositories/opportunity.repository.js';
