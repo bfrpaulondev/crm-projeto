@@ -77,6 +77,17 @@ const ME_QUERY = `
   }
 `;
 
+const TENANT_BY_SLUG_QUERY = `
+  query TenantBySlug($slug: String!) {
+    tenantBySlug(slug: $slug) {
+      id
+      name
+      slug
+      plan
+    }
+  }
+`;
+
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -114,8 +125,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async (input: LoginInput) => {
     setError(null);
     setIsLoading(true);
-    
+
     try {
+      // Step 1: Look up tenant by slug to get the tenant ID
+      const tenantData = await graphqlRequest<{
+        tenantBySlug: Tenant | null;
+      }>(TENANT_BY_SLUG_QUERY, { slug: input.tenantSlug });
+
+      if (!tenantData.tenantBySlug) {
+        throw new Error('Workspace not found. Please check your workspace slug.');
+      }
+
+      // Step 2: Login with the tenant ID
       const data = await graphqlRequest<{
         login: {
           accessToken: string;
@@ -123,12 +144,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user: User;
           tenant: Tenant;
         };
-      }>(LOGIN_MUTATION, { input });
+      }>(LOGIN_MUTATION, {
+        input: {
+          email: input.email,
+          password: input.password,
+          tenantId: tenantData.tenantBySlug.id,
+        },
+      });
 
       setTokens(data.login.accessToken, data.login.refreshToken);
       setUser(data.login.user);
       setTenant(data.login.tenant);
-      
+
       router.push('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
