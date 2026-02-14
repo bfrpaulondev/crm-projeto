@@ -134,11 +134,11 @@ export default function LeadDetailPage() {
   };
 
   const handleQualify = async () => {
-    await qualifyLead({ variables: { id: leadId } });
+    await qualifyLead({ variables: { input: { leadId } } });
   };
 
   const handleConvert = async () => {
-    await convertLead({ variables: { id: leadId } });
+    await convertLead({ variables: { input: { leadId, createOpportunity: true } } });
   };
 
   return (
@@ -286,7 +286,7 @@ export default function LeadDetailPage() {
                 <Building2 className="w-5 h-5 text-slate-400" />
                 <div>
                   <p className="text-xs text-slate-500">Company</p>
-                  <p className="text-slate-900">{lead.company || 'Not provided'}</p>
+                  <p className="text-slate-900">{lead.companyName || 'Not provided'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">

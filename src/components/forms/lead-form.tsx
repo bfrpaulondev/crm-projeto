@@ -35,7 +35,7 @@ const leadSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Please enter a valid email'),
   phone: z.string().optional(),
-  company: z.string().optional(),
+  companyName: z.string().optional(),
   status: z.enum(['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED']).optional(),
   source: z.enum(['WEBSITE', 'REFERRAL', 'COLD_CALL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'TRADE_SHOW', 'OTHER']).optional(),
   estimatedValue: z.number().min(0).optional(),
@@ -113,7 +113,7 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
       lastName: lead?.lastName || '',
       email: lead?.email || '',
       phone: lead?.phone || '',
-      company: lead?.company || '',
+      companyName: lead?.companyName || '',
       status: lead?.status || 'NEW',
       source: lead?.source || 'WEBSITE',
       estimatedValue: lead?.estimatedValue || undefined,
@@ -220,10 +220,10 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="companyName">Company</Label>
               <Input
-                id="company"
-                {...register('company')}
+                id="companyName"
+                {...register('companyName')}
                 placeholder="Acme Inc."
               />
             </div>

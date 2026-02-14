@@ -131,9 +131,9 @@ export default function LeadsPage() {
           <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-600" />
             Lead List
-            {!loading && data?.leads?.totalCount !== undefined && (
+            {!loading && data?.leads?.pageInfo?.totalCount !== undefined && (
               <span className="text-sm font-normal text-slate-500">
-                ({data.leads.totalCount} total)
+                ({data.leads.pageInfo.totalCount} total)
               </span>
             )}
           </CardTitle>
@@ -248,7 +248,7 @@ export default function LeadsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-slate-600">
-                          {lead.company || '-'}
+                          {lead.companyName || '-'}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-slate-600">
                           {formatCurrency(lead.estimatedValue)}
@@ -280,7 +280,7 @@ export default function LeadsPage() {
               {/* Pagination */}
               <div className="flex items-center justify-between pt-4">
                 <p className="text-sm text-slate-500">
-                  Showing {leads.length} of {data?.leads?.totalCount ?? 0} leads
+                  Showing {leads.length} of {data?.leads?.pageInfo?.totalCount ?? 0} leads
                 </p>
                 <div className="flex items-center gap-2">
                   <Button

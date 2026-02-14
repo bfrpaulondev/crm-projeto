@@ -1,11 +1,22 @@
 import { gql } from '@apollo/client';
 
 export const CREATE_LEAD_MUTATION = gql`
-  mutation CreateLead($firstName: String!, $lastName: String!, $email: String!, $phone: String, $companyName: String) {
-    createLead(firstName: $firstName, lastName: $lastName, email: $email, phone: $phone, companyName: $companyName) {
-      id
-      email
-      status
+  mutation CreateLead($input: CreateLeadInput!) {
+    createLead(input: $input) {
+      success
+      message
+      lead {
+        id
+        firstName
+        lastName
+        email
+        phone
+        companyName
+        status
+        source
+        notes
+        createdAt
+      }
     }
   }
 `;
@@ -13,37 +24,49 @@ export const CREATE_LEAD_MUTATION = gql`
 export const UPDATE_LEAD_MUTATION = gql`
   mutation UpdateLead($id: String!, $input: UpdateLeadInput!) {
     updateLead(id: $id, input: $input) {
-      id
-      firstName
-      lastName
-      email
-      phone
-      companyName
-      status
-      source
-      estimatedValue
-      notes
-      updatedAt
+      success
+      message
+      lead {
+        id
+        firstName
+        lastName
+        email
+        phone
+        companyName
+        status
+        source
+        notes
+        updatedAt
+      }
     }
   }
 `;
 
 export const QUALIFY_LEAD_MUTATION = gql`
-  mutation QualifyLead($id: String!) {
-    qualifyLead(id: $id) {
-      id
-      status
+  mutation QualifyLead($input: QualifyLeadInput!) {
+    qualifyLead(input: $input) {
+      success
+      message
+      lead {
+        id
+        status
+      }
     }
   }
 `;
 
 export const CONVERT_LEAD_MUTATION = gql`
-  mutation ConvertLead($leadId: String!, $createOpportunity: Boolean, $opportunityName: String, $opportunityAmount: Float) {
-    convertLead(leadId: $leadId, createOpportunity: $createOpportunity, opportunityName: $opportunityName, opportunityAmount: $opportunityAmount) {
-      leadId
-      accountId
-      contactId
-      opportunityId
+  mutation ConvertLead($input: ConvertLeadInput!) {
+    convertLead(input: $input) {
+      success
+      message
+      lead {
+        id
+        status
+        convertedToContactId
+        convertedToAccountId
+        convertedToOpportunityId
+      }
     }
   }
 `;

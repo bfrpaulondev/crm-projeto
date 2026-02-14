@@ -1,17 +1,31 @@
 import { gql } from '@apollo/client';
 
-// Simple lead list query matching the API
+// Leads query with pagination and filtering
 export const GET_LEADS = gql`
-  query GetLeads {
-    leads {
-      id
-      firstName
-      lastName
-      email
-      phone
-      companyName
-      status
-      createdAt
+  query GetLeads($first: Int, $after: String, $filter: LeadFilterInput) {
+    leads(first: $first, after: $after, filter: $filter) {
+      edges {
+        node {
+          id
+          firstName
+          lastName
+          email
+          phone
+          companyName
+          status
+          source
+          score
+          createdAt
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
+      }
     }
   }
 `;
