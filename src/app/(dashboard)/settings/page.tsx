@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils/formatters';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -315,9 +315,15 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-slate-500">Tenant Name</p>
+                <p className="text-sm text-slate-500">Organization Name</p>
                 <p className="font-medium text-slate-900">
-                  {user?.email?.split('@')[1]?.split('.')[0] || 'Your Organization'}
+                  {tenant?.name || 'Your Organization'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Workspace Slug</p>
+                <p className="font-mono text-xs text-slate-600 bg-slate-50 p-2 rounded">
+                  {tenant?.slug || 'N/A'}
                 </p>
               </div>
               <div>
@@ -328,12 +334,6 @@ export default function SettingsPage() {
                 >
                   {roleLabels[user?.role || 'SALES_REP']}
                 </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Tenant ID</p>
-                <p className="font-mono text-xs text-slate-600 bg-slate-50 p-2 rounded">
-                  {user?.tenantId || 'N/A'}
-                </p>
               </div>
             </CardContent>
           </Card>

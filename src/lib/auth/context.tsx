@@ -32,7 +32,6 @@ const LOGIN_MUTATION = `
         firstName
         lastName
         role
-        tenantId
       }
       tenant {
         id
@@ -55,7 +54,6 @@ const REGISTER_MUTATION = `
         firstName
         lastName
         role
-        tenantId
       }
       tenant {
         id
@@ -75,7 +73,6 @@ const ME_QUERY = `
       firstName
       lastName
       role
-      tenantId
     }
   }
 `;
