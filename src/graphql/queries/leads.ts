@@ -26,7 +26,17 @@ export const GET_LEAD = gql`
       phone
       companyName
       status
+      source
+      estimatedValue
+      notes
       createdAt
+      updatedAt
+      assignedTo {
+        id
+        firstName
+        lastName
+        email
+      }
     }
   }
 `;
@@ -61,7 +71,8 @@ export const GET_PIPELINE = gql`
         expectedCloseDate
         assignedTo {
           id
-          name
+          firstName
+          lastName
         }
         lead {
           id

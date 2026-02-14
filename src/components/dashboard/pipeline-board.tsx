@@ -147,7 +147,7 @@ export function PipelineBoard({ data, onRefresh }: PipelineBoardProps) {
                       {opportunity.assignedTo && (
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
                           <User className="w-3.5 h-3.5" />
-                          <span>{opportunity.assignedTo.name}</span>
+                          <span>{opportunity.assignedTo.firstName} {opportunity.assignedTo.lastName}</span>
                         </div>
                       )}
                       

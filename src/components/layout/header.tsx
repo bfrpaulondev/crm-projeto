@@ -75,7 +75,7 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
               >
                 <Avatar className="h-9 w-9 bg-purple-600">
                   <AvatarFallback className="bg-purple-600 text-white text-sm font-medium">
-                    {user ? getInitials(user.name.split(' ')[0], user.name.split(' ')[1] || '') : 'U'}
+                    {user ? getInitials(user.firstName, user.lastName) : 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -83,7 +83,7 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>

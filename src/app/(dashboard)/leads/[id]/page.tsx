@@ -349,14 +349,14 @@ export default function LeadDetailPage() {
                   <Avatar className="h-10 w-10 bg-purple-100">
                     <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-medium">
                       {getInitials(
-                        lead.assignedTo?.name?.split(' ')[0] || '',
-                        lead.assignedTo?.name?.split(' ')[1] || ''
+                        lead.assignedTo?.firstName || '',
+                        lead.assignedTo?.lastName || ''
                       )}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-slate-900">{lead.assignedTo.name}</p>
-                    <p className="text-xs text-slate-500">{lead.assignedTo.email}</p>
+                    <p className="font-medium text-slate-900">{lead.assignedTo?.firstName} {lead.assignedTo?.lastName}</p>
+                    <p className="text-xs text-slate-500">{lead.assignedTo?.email}</p>
                   </div>
                 </div>
               </CardContent>

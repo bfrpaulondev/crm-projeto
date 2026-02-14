@@ -111,7 +111,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-6">
                   <Avatar className="h-20 w-20 bg-purple-100">
                     <AvatarFallback className="bg-purple-100 text-purple-700 text-2xl font-medium">
-                      {user ? getInitials(user.name.split(' ')[0], user.name.split(' ')[1] || '') : 'U'}
+                      {user ? getInitials(user.firstName, user.lastName : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
