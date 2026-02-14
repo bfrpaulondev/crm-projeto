@@ -26,7 +26,8 @@ import { getInitials } from '@/lib/utils/formatters';
 export default function SettingsPage() {
   const { user } = useAuth();
   const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     email: user?.email || '',
   });
   const [passwordForm, setPasswordForm] = useState({
@@ -111,11 +112,11 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-6">
                   <Avatar className="h-20 w-20 bg-purple-100">
                     <AvatarFallback className="bg-purple-100 text-purple-700 text-2xl font-medium">
-                      {user ? getInitials(user.firstName, user.lastName : 'U'}
+                      {user ? getInitials(user.firstName, user.lastName) : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-slate-900">{user?.name}</p>
+                    <p className="font-medium text-slate-900">{user?.firstName} {user?.lastName}</p>
                     <p className="text-sm text-slate-500">{user?.email}</p>
                     <Badge
                       variant="secondary"
@@ -130,11 +131,19 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="firstName">First Name</Label>
                     <Input
-                      id="name"
-                      value={profileForm.name}
-                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      id="firstName"
+                      value={profileForm.firstName}
+                      onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={profileForm.lastName}
+                      onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">

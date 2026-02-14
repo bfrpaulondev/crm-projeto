@@ -7,6 +7,7 @@ export interface User {
   lastName: string;
   name?: string;
   role: UserRole;
+  tenantId?: string;
 }
 
 export type UserRole = 'ADMIN' | 'SALES_REP' | 'SALES_MANAGER' | 'READ_ONLY';
