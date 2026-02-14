@@ -1,5 +1,7 @@
 'use client';
 
+import { ApolloProvider } from '@apollo/client/react';
+import { getApolloClient } from './client';
 import { AuthProvider } from '@/lib/auth/context';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -8,10 +10,14 @@ interface ApolloProviderWrapperProps {
 }
 
 export function ApolloProviderWrapper({ children }: ApolloProviderWrapperProps) {
+  const client = getApolloClient();
+  
   return (
-    <AuthProvider>
-      {children}
-      <Toaster position="top-right" richColors closeButton />
-    </AuthProvider>
+    <ApolloProvider client={client}>
+      <AuthProvider>
+        {children}
+        <Toaster position="top-right" richColors closeButton />
+      </AuthProvider>
+    </ApolloProvider>
   );
 }
