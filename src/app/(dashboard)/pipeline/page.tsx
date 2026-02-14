@@ -114,14 +114,13 @@ export default function PipelinePage() {
       return;
     }
 
+    // Use individual arguments instead of input object
     await createOpportunity({
       variables: {
-        input: {
-          name: newOpportunity.name.trim(),
-          amount: parseFloat(newOpportunity.amount),
-          stage: newOpportunity.stage,
-          probability: newOpportunity.probability,
-        },
+        name: newOpportunity.name.trim(),
+        amount: parseFloat(newOpportunity.amount),
+        stage: newOpportunity.stage,
+        probability: newOpportunity.probability,
       },
     });
   };

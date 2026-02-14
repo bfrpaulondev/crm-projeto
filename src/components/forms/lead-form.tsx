@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Lead, LeadStatus, CreateLeadInput, UpdateLeadInput } from '@/types';
+import { Lead, LeadStatus } from '@/types';
 
 const leadSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -112,23 +112,24 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
   const onSubmit = async (data: LeadFormData) => {
     setError(null);
     
-    const input = {
+    // Pass individual arguments instead of input object
+    const variables = {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
       phone: data.phone || null,
       companyName: data.companyName || null,
-      status: data.status,
+      status: data.status || 'NEW',
       notes: data.notes || null,
     };
 
     if (isEditing && lead) {
       await updateLead({
-        variables: { id: lead.id, input: input as UpdateLeadInput },
+        variables: { id: lead.id, ...variables },
       });
     } else {
       await createLead({
-        variables: { input: input as CreateLeadInput },
+        variables,
       });
     }
   };

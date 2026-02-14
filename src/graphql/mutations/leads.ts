@@ -1,79 +1,97 @@
 import { gql } from '@apollo/client';
 
+// Updated to match deployed API - uses individual arguments instead of input type
 export const CREATE_LEAD_MUTATION = gql`
-  mutation CreateLead($input: CreateLeadInput!) {
-    createLead(input: $input) {
-      success
-      message
-      lead {
-        id
-        firstName
-        lastName
-        email
-        phone
-        companyName
-        status
-        source
-        notes
-        createdAt
-      }
+  mutation CreateLead(
+    $firstName: String!
+    $lastName: String!
+    $email: String!
+    $phone: String
+    $companyName: String
+    $status: String
+    $notes: String
+  ) {
+    createLead(
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      phone: $phone
+      companyName: $companyName
+      status: $status
+      notes: $notes
+    ) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      companyName
+      status
+      notes
+      createdAt
     }
   }
 `;
 
+// Update lead mutation - individual arguments
 export const UPDATE_LEAD_MUTATION = gql`
-  mutation UpdateLead($id: String!, $input: UpdateLeadInput!) {
-    updateLead(id: $id, input: $input) {
-      success
-      message
-      lead {
-        id
-        firstName
-        lastName
-        email
-        phone
-        companyName
-        status
-        source
-        notes
-        updatedAt
-      }
+  mutation UpdateLead(
+    $id: String!
+    $firstName: String
+    $lastName: String
+    $email: String
+    $phone: String
+    $companyName: String
+    $status: String
+    $notes: String
+  ) {
+    updateLead(
+      id: $id
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      phone: $phone
+      companyName: $companyName
+      status: $status
+      notes: $notes
+    ) {
+      id
+      firstName
+      lastName
+      email
+      phone
+      companyName
+      status
+      notes
+      updatedAt
     }
   }
 `;
 
-export const QUALIFY_LEAD_MUTATION = gql`
-  mutation QualifyLead($input: QualifyLeadInput!) {
-    qualifyLead(input: $input) {
-      success
-      message
-      lead {
-        id
-        status
-      }
-    }
-  }
-`;
-
-export const CONVERT_LEAD_MUTATION = gql`
-  mutation ConvertLead($input: ConvertLeadInput!) {
-    convertLead(input: $input) {
-      success
-      message
-      lead {
-        id
-        status
-        convertedToContactId
-        convertedToAccountId
-        convertedToOpportunityId
-      }
-    }
-  }
-`;
-
+// Delete lead mutation
 export const DELETE_LEAD_MUTATION = gql`
   mutation DeleteLead($id: String!) {
     deleteLead(id: $id)
+  }
+`;
+
+// Qualify lead - try with individual args
+export const QUALIFY_LEAD_MUTATION = gql`
+  mutation QualifyLead($id: String!) {
+    qualifyLead(id: $id) {
+      id
+      status
+    }
+  }
+`;
+
+// Convert lead - try with individual args
+export const CONVERT_LEAD_MUTATION = gql`
+  mutation ConvertLead($id: String!) {
+    convertLead(id: $id) {
+      id
+      status
+    }
   }
 `;
 
@@ -120,11 +138,27 @@ export const DELETE_WEBHOOK_MUTATION = gql`
 `;
 
 export const CREATE_OPPORTUNITY_MUTATION = gql`
-  mutation CreateOpportunity($input: CreateOpportunityInput!) {
-    createOpportunity(input: $input) {
+  mutation CreateOpportunity(
+    $name: String!
+    $amount: Float
+    $stage: String
+    $probability: Int
+    $expectedCloseDate: String
+    $leadId: String
+    $accountId: String
+  ) {
+    createOpportunity(
+      name: $name
+      amount: $amount
+      stage: $stage
+      probability: $probability
+      expectedCloseDate: $expectedCloseDate
+      leadId: $leadId
+      accountId: $accountId
+    ) {
       id
       name
-      value
+      amount
       stage
       probability
       createdAt
