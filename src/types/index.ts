@@ -9,7 +9,7 @@ export interface User {
   role: UserRole;
 }
 
-export type UserRole = 'ADMIN' | 'SALES_REP' | 'SALES_MANAGER' | 'READ_ONLY';
+export type UserRole = 'ADMIN' | 'MANAGER' | 'SALES_REP' | 'READ_ONLY';
 
 export interface Tenant {
   id: string;
@@ -29,6 +29,8 @@ export interface Lead {
   companyName?: string;
   status: LeadStatus;
   notes?: string;
+  ownerId?: string;
+  owner?: User;
   createdAt: string;
   updatedAt: string;
 }
@@ -228,4 +230,74 @@ export interface Attachment {
   mimeType: string;
   size: number;
   url: string;
+}
+
+// Activity Types
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  subject: string;
+  description?: string;
+  status: ActivityStatus;
+  priority: ActivityPriority;
+  dueDate?: string;
+  completedAt?: string;
+  leadId?: string;
+  lead?: Lead;
+  assignedToId?: string;
+  assignedTo?: User;
+  createdById?: string;
+  createdBy?: User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ActivityType = 'CALL' | 'EMAIL' | 'MEETING' | 'TASK' | 'NOTE';
+export type ActivityStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type ActivityPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export interface CreateActivityInput {
+  type: ActivityType;
+  subject: string;
+  description?: string;
+  priority?: ActivityPriority;
+  dueDate?: string;
+  leadId?: string;
+  assignedToId?: string;
+}
+
+export interface UpdateActivityInput {
+  type?: ActivityType;
+  subject?: string;
+  description?: string;
+  status?: ActivityStatus;
+  priority?: ActivityPriority;
+  dueDate?: string;
+  leadId?: string;
+  assignedToId?: string;
+}
+
+// Email Template Types
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  variables?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEmailTemplateInput {
+  name: string;
+  subject: string;
+  body: string;
+  variables?: string[];
+}
+
+export interface UpdateEmailTemplateInput {
+  name?: string;
+  subject?: string;
+  body?: string;
+  variables?: string[];
 }

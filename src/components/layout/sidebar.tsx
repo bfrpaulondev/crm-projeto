@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  CheckSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
+  { name: 'Activities', href: '/activities', icon: CheckSquare },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

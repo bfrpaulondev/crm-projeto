@@ -15,6 +15,14 @@ export const GET_LEADS = gql`
       phone
       companyName
       status
+      ownerId
+      owner {
+        id
+        firstName
+        lastName
+        email
+        role
+      }
       createdAt
     }
   }
@@ -31,6 +39,14 @@ export const GET_LEAD = gql`
       phone
       companyName
       status
+      ownerId
+      owner {
+        id
+        firstName
+        lastName
+        email
+        role
+      }
       createdAt
     }
   }

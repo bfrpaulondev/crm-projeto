@@ -93,6 +93,22 @@ export const DELETE_WEBHOOK_MUTATION = gql`
   }
 `;
 
+// assignLead: accepts leadId and ownerId
+export const ASSIGN_LEAD_MUTATION = gql`
+  mutation AssignLead($leadId: String!, $ownerId: String!) {
+    assignLead(leadId: $leadId, ownerId: $ownerId) {
+      id
+      ownerId
+      owner {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+`;
+
 // NOTE: The following mutations DO NOT EXIST in the deployed API:
 // - updateLead (use qualifyLead or convertLead to change status)
 // - createOpportunity
