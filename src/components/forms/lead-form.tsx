@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Lead, LeadStatus, LeadSource, CreateLeadInput, UpdateLeadInput } from '@/types';
+import { Lead, LeadStatus, CreateLeadInput, UpdateLeadInput } from '@/types';
 
 const leadSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -37,8 +37,6 @@ const leadSchema = z.object({
   phone: z.string().optional(),
   companyName: z.string().optional(),
   status: z.enum(['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED']).optional(),
-  source: z.enum(['WEBSITE', 'REFERRAL', 'COLD_CALL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'TRADE_SHOW', 'OTHER']).optional(),
-  estimatedValue: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
 
@@ -59,22 +57,12 @@ const statusOptions: { value: LeadStatus; label: string }[] = [
   { value: 'CONVERTED', label: 'Converted' },
 ];
 
-const sourceOptions: { value: LeadSource; label: string }[] = [
-  { value: 'WEBSITE', label: 'Website' },
-  { value: 'REFERRAL', label: 'Referral' },
-  { value: 'COLD_CALL', label: 'Cold Call' },
-  { value: 'EMAIL_CAMPAIGN', label: 'Email Campaign' },
-  { value: 'SOCIAL_MEDIA', label: 'Social Media' },
-  { value: 'TRADE_SHOW', label: 'Trade Show' },
-  { value: 'OTHER', label: 'Other' },
-];
-
 export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps) {
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!lead;
 
   const [createLead, { loading: creating }] = useMutation(CREATE_LEAD_MUTATION, {
-    refetchQueries: [{ query: GET_LEADS, variables: { first: 20 } }],
+    refetchQueries: [{ query: GET_LEADS }],
     onCompleted: () => {
       toast.success('Lead created successfully');
       onOpenChange(false);
@@ -86,7 +74,7 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
   });
 
   const [updateLead, { loading: updating }] = useMutation(UPDATE_LEAD_MUTATION, {
-    refetchQueries: [{ query: GET_LEADS, variables: { first: 20 } }],
+    refetchQueries: [{ query: GET_LEADS }],
     onCompleted: () => {
       toast.success('Lead updated successfully');
       onOpenChange(false);
@@ -115,21 +103,23 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
       phone: lead?.phone || '',
       companyName: lead?.companyName || '',
       status: lead?.status || 'NEW',
-      source: lead?.source || 'WEBSITE',
-      estimatedValue: lead?.estimatedValue || undefined,
       notes: lead?.notes || '',
     },
   });
 
   const currentStatus = watch('status');
-  const currentSource = watch('source');
 
   const onSubmit = async (data: LeadFormData) => {
     setError(null);
     
     const input = {
-      ...data,
-      estimatedValue: data.estimatedValue ? Number(data.estimatedValue) : undefined,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone || null,
+      companyName: data.companyName || null,
+      status: data.status,
+      notes: data.notes || null,
     };
 
     if (isEditing && lead) {
@@ -229,58 +219,23 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={currentStatus}
-                onValueChange={(value: LeadStatus) => setValue('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="source">Source</Label>
-              <Select
-                value={currentSource}
-                onValueChange={(value: LeadSource) => setValue('source', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="estimatedValue">Estimated Value ($)</Label>
-            <Input
-              id="estimatedValue"
-              type="number"
-              {...register('estimatedValue', { valueAsNumber: true })}
-              placeholder="10000"
-              min="0"
-            />
-            {errors.estimatedValue && (
-              <p className="text-sm text-red-500">{errors.estimatedValue.message}</p>
-            )}
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={currentStatus}
+              onValueChange={(value: LeadStatus) => setValue('status', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

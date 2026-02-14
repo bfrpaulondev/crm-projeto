@@ -27,14 +27,8 @@ export interface Lead {
   email: string;
   phone?: string;
   companyName?: string;
-  title?: string;
-  website?: string;
-  industry?: string;
   status: LeadStatus;
-  source?: LeadSource;
-  score?: number;
   notes?: string;
-  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }

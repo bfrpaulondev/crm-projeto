@@ -33,7 +33,6 @@ import {
   Phone,
   Building2,
   Calendar,
-  User,
   Edit,
   Trash2,
   CheckCircle,
@@ -41,7 +40,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Lead, LeadStatus } from '@/types';
-import { formatDate, formatDateTime, formatCurrency, getInitials } from '@/lib/utils/formatters';
+import { formatDateTime, getInitials } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -51,16 +50,6 @@ const statusStyles: Record<LeadStatus, { bg: string; text: string; icon: React.C
   QUALIFIED: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle },
   UNQUALIFIED: { bg: 'bg-slate-100', text: 'text-slate-700', icon: AlertCircle },
   CONVERTED: { bg: 'bg-purple-100', text: 'text-purple-700', icon: CheckCircle },
-};
-
-const sourceLabels: Record<string, string> = {
-  WEBSITE: 'Website',
-  REFERRAL: 'Referral',
-  COLD_CALL: 'Cold Call',
-  EMAIL_CAMPAIGN: 'Email Campaign',
-  SOCIAL_MEDIA: 'Social Media',
-  TRADE_SHOW: 'Trade Show',
-  OTHER: 'Other',
 };
 
 export default function LeadDetailPage() {
@@ -75,7 +64,7 @@ export default function LeadDetailPage() {
   });
 
   const [deleteLead, { loading: deleting }] = useMutation(DELETE_LEAD_MUTATION, {
-    refetchQueries: [{ query: GET_LEADS, variables: { first: 20 } }],
+    refetchQueries: [{ query: GET_LEADS }],
     onCompleted: () => {
       toast.success('Lead deleted successfully');
       router.push('/leads');
@@ -314,49 +303,6 @@ export default function LeadDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Score Card */}
-          <Card className="bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Lead Score</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-slate-900">
-                {lead.score ?? 0}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">Quality score (0-100)</p>
-            </CardContent>
-          </Card>
-
-          {/* Source Card */}
-          <Card className="bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Lead Source</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-medium">
-                {sourceLabels[lead.source] || lead.source || 'Not set'}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          {/* Tags */}
-          {lead.tags && lead.tags.length > 0 && (
-            <Card className="bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Tags</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {lead.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-slate-600">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Timeline */}
           <Card className="bg-white shadow-sm">
             <CardHeader>

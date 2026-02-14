@@ -11,8 +11,6 @@ export const GET_LEADS = gql`
       phone
       companyName
       status
-      source
-      score
       createdAt
     }
   }
@@ -27,14 +25,8 @@ export const GET_LEAD = gql`
       email
       phone
       companyName
-      title
-      website
-      industry
       status
-      source
-      score
       notes
-      tags
       createdAt
       updatedAt
     }

@@ -30,7 +30,7 @@ import {
   Loader2,
   Users,
 } from 'lucide-react';
-import { Lead, LeadStatus, LeadSource } from '@/types';
+import { Lead, LeadStatus } from '@/types';
 import { formatDate, getInitials } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils';
 
@@ -45,7 +45,6 @@ const statusStyles: Record<LeadStatus, { bg: string; text: string }> = {
 export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
-  const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const { data, loading, error, refetch } = useQuery(GET_LEADS, {
@@ -58,16 +57,15 @@ export default function LeadsPage() {
   const leads = useMemo(() => {
     return allLeads.filter((lead: Lead) => {
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-      const matchesSource = sourceFilter === 'ALL' || lead.source === sourceFilter;
       const matchesSearch = !searchQuery || 
         lead.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (lead.companyName || '').toLowerCase().includes(searchQuery.toLowerCase());
       
-      return matchesStatus && matchesSource && matchesSearch;
+      return matchesStatus && matchesSearch;
     });
-  }, [allLeads, statusFilter, sourceFilter, searchQuery]);
+  }, [allLeads, statusFilter, searchQuery]);
 
   if (error) {
     return (
@@ -138,24 +136,6 @@ export default function LeadsPage() {
                 <SelectItem value="CONVERTED">Converted</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={sourceFilter}
-              onValueChange={(value) => setSourceFilter(value as LeadSource | 'ALL')}
-            >
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Sources</SelectItem>
-                <SelectItem value="WEBSITE">Website</SelectItem>
-                <SelectItem value="REFERRAL">Referral</SelectItem>
-                <SelectItem value="COLD_CALL">Cold Call</SelectItem>
-                <SelectItem value="EMAIL_CAMPAIGN">Email Campaign</SelectItem>
-                <SelectItem value="SOCIAL_MEDIA">Social Media</SelectItem>
-                <SelectItem value="TRADE_SHOW">Trade Show</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Table */}
@@ -182,7 +162,6 @@ export default function LeadsPage() {
                     <TableHead>Lead</TableHead>
                     <TableHead className="hidden md:table-cell">Company</TableHead>
                     <TableHead className="hidden sm:table-cell">Status</TableHead>
-                    <TableHead className="hidden xl:table-cell">Source</TableHead>
                     <TableHead className="hidden md:table-cell">Created</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -222,9 +201,6 @@ export default function LeadsPage() {
                         >
                           {lead.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell text-slate-600">
-                        {lead.source?.replace('_', ' ') || '-'}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-slate-500 text-sm">
                         {formatDate(lead.createdAt)}
