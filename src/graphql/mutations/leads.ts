@@ -46,11 +46,14 @@ export const QUALIFY_LEAD_MUTATION = gql`
 `;
 
 // convertLead: accepts leadId and createOpportunity (optional)
+// Returns: leadId, contactId, accountId, opportunityId
 export const CONVERT_LEAD_MUTATION = gql`
   mutation ConvertLead($leadId: String!, $createOpportunity: Boolean) {
     convertLead(leadId: $leadId, createOpportunity: $createOpportunity) {
-      id
-      status
+      leadId
+      contactId
+      accountId
+      opportunityId
     }
   }
 `;
