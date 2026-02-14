@@ -1,31 +1,19 @@
 import { gql } from '@apollo/client';
 
-// Leads query with pagination and filtering
+// Simple leads query - matches deployed API
 export const GET_LEADS = gql`
-  query GetLeads($first: Int, $after: String, $filter: LeadFilterInput) {
-    leads(first: $first, after: $after, filter: $filter) {
-      edges {
-        node {
-          id
-          firstName
-          lastName
-          email
-          phone
-          companyName
-          status
-          source
-          score
-          createdAt
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
-        totalCount
-      }
+  query GetLeads {
+    leads {
+      id
+      firstName
+      lastName
+      email
+      phone
+      companyName
+      status
+      source
+      score
+      createdAt
     }
   }
 `;
@@ -53,28 +41,18 @@ export const GET_LEAD = gql`
   }
 `;
 
-// Opportunities with pagination
+// Simple opportunities query
 export const GET_OPPORTUNITIES = gql`
-  query GetOpportunities($first: Int, $after: String, $filter: OpportunityFilterInput) {
-    opportunities(first: $first, after: $after, filter: $filter) {
-      edges {
-        node {
-          id
-          name
-          amount
-          stage
-          status
-          probability
-          expectedCloseDate
-          createdAt
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        totalCount
-      }
+  query GetOpportunities {
+    opportunities {
+      id
+      name
+      amount
+      stage
+      status
+      probability
+      expectedCloseDate
+      createdAt
     }
   }
 `;

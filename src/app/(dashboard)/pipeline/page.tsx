@@ -59,14 +59,13 @@ export default function PipelinePage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: opportunitiesData, loading: opportunitiesLoading, error: opportunitiesError, refetch } = useQuery(GET_OPPORTUNITIES, {
-    variables: { first: 100 },
     fetchPolicy: 'cache-and-network',
   });
 
   const { data: stagesData } = useQuery(GET_STAGES);
 
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION, {
-    refetchQueries: [{ query: GET_OPPORTUNITIES, variables: { first: 100 } }],
+    refetchQueries: [{ query: GET_OPPORTUNITIES }],
     onCompleted: () => {
       toast.success('Opportunity created successfully');
       setShowCreateForm(false);
@@ -87,10 +86,7 @@ export default function PipelinePage() {
     },
   });
 
-  const opportunities = useMemo(() => {
-    if (!opportunitiesData?.opportunities?.edges) return [];
-    return opportunitiesData.opportunities.edges.map((edge: { node: Opportunity }) => edge.node);
-  }, [opportunitiesData]);
+  const opportunities = opportunitiesData?.opportunities || [];
 
   const stages = useMemo(() => {
     if (!stagesData?.stages) return Object.keys(stageLabels);

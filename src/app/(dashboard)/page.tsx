@@ -12,11 +12,10 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
 
   const { data, loading, error } = useQuery(GET_LEADS, {
-    variables: { first: 100 },
     fetchPolicy: 'cache-and-network',
   });
 
-  const leads = data?.leads?.edges?.map((edge: { node: Lead }) => edge.node) || [];
+  const leads = data?.leads || [];
   
   const stats = {
     totalLeads: leads.length,

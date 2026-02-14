@@ -29,12 +29,9 @@ import {
   Search,
   Loader2,
   Users,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
-import Link from 'next/link';
 import { Lead, LeadStatus, LeadSource } from '@/types';
-import { formatDate, getInitials, formatCurrency } from '@/lib/utils/formatters';
+import { formatDate, getInitials } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils';
 
 const statusStyles: Record<LeadStatus, { bg: string; text: string }> = {
@@ -45,57 +42,32 @@ const statusStyles: Record<LeadStatus, { bg: string; text: string }> = {
   CONVERTED: { bg: 'bg-purple-100', text: 'text-purple-700' },
 };
 
-const ITEMS_PER_PAGE = 10;
-
 export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [pageHistory, setPageHistory] = useState<(string | null)[]>([null]);
 
   const { data, loading, error, refetch } = useQuery(GET_LEADS, {
-    variables: {
-      first: ITEMS_PER_PAGE,
-      after: cursor,
-      filter: {
-        ...(statusFilter !== 'ALL' && { status: statusFilter }),
-        ...(sourceFilter !== 'ALL' && { source: sourceFilter }),
-        ...(searchQuery && { search: searchQuery }),
-      },
-    },
     fetchPolicy: 'cache-and-network',
-    onCompleted: (result) => {
-      setHasNextPage(result?.leads?.pageInfo?.hasNextPage ?? false);
-    },
   });
 
+  const allLeads = data?.leads || [];
+
+  // Filter leads client-side
   const leads = useMemo(() => {
-    if (!data?.leads?.edges) return [];
-    return data.leads.edges.map((edge: { node: Lead }) => edge.node);
-  }, [data]);
-
-  const handleNextPage = () => {
-    if (data?.leads?.pageInfo?.endCursor) {
-      setPageHistory([...pageHistory, cursor]);
-      setCursor(data.leads.pageInfo.endCursor);
-    }
-  };
-
-  const handlePrevPage = () => {
-    const newHistory = [...pageHistory];
-    newHistory.pop();
-    const prevCursor = newHistory[newHistory.length - 1] || null;
-    setPageHistory(newHistory);
-    setCursor(prevCursor);
-  };
-
-  const handleFilterChange = () => {
-    setCursor(null);
-    setPageHistory([null]);
-  };
+    return allLeads.filter((lead: Lead) => {
+      const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
+      const matchesSource = sourceFilter === 'ALL' || lead.source === sourceFilter;
+      const matchesSearch = !searchQuery || 
+        lead.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (lead.companyName || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesStatus && matchesSource && matchesSearch;
+    });
+  }, [allLeads, statusFilter, sourceFilter, searchQuery]);
 
   if (error) {
     return (
@@ -131,9 +103,9 @@ export default function LeadsPage() {
           <CardTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-600" />
             Lead List
-            {!loading && data?.leads?.pageInfo?.totalCount !== undefined && (
+            {!loading && (
               <span className="text-sm font-normal text-slate-500">
-                ({data.leads.pageInfo.totalCount} total)
+                ({leads.length} total)
               </span>
             )}
           </CardTitle>
@@ -146,19 +118,13 @@ export default function LeadsPage() {
                 type="search"
                 placeholder="Search by name, email, or company..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleFilterChange();
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value as LeadStatus | 'ALL');
-                handleFilterChange();
-              }}
+              onValueChange={(value) => setStatusFilter(value as LeadStatus | 'ALL')}
             >
               <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Status" />
@@ -174,10 +140,7 @@ export default function LeadsPage() {
             </Select>
             <Select
               value={sourceFilter}
-              onValueChange={(value) => {
-                setSourceFilter(value as LeadSource | 'ALL');
-                handleFilterChange();
-              }}
+              onValueChange={(value) => setSourceFilter(value as LeadSource | 'ALL')}
             >
               <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Source" />
@@ -212,98 +175,65 @@ export default function LeadsPage() {
               </Button>
             </div>
           ) : (
-            <>
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Lead</TableHead>
-                      <TableHead className="hidden md:table-cell">Company</TableHead>
-                      <TableHead className="hidden lg:table-cell">Value</TableHead>
-                      <TableHead className="hidden sm:table-cell">Status</TableHead>
-                      <TableHead className="hidden xl:table-cell">Source</TableHead>
-                      <TableHead className="hidden md:table-cell">Created</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leads.map((lead: Lead) => (
-                      <TableRow
-                        key={lead.id}
-                        className="cursor-pointer hover:bg-slate-50/50"
-                        onClick={() => window.location.href = `/leads/${lead.id}`}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 bg-purple-100">
-                              <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-medium">
-                                {getInitials(lead.firstName, lead.lastName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-slate-900 hover:text-purple-600 transition-colors">
-                                {lead.firstName} {lead.lastName}
-                              </p>
-                              <p className="text-xs text-slate-500">{lead.email}</p>
-                            </div>
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>Lead</TableHead>
+                    <TableHead className="hidden md:table-cell">Company</TableHead>
+                    <TableHead className="hidden sm:table-cell">Status</TableHead>
+                    <TableHead className="hidden xl:table-cell">Source</TableHead>
+                    <TableHead className="hidden md:table-cell">Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((lead: Lead) => (
+                    <TableRow
+                      key={lead.id}
+                      className="cursor-pointer hover:bg-slate-50/50"
+                      onClick={() => window.location.href = `/leads/${lead.id}`}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 bg-purple-100">
+                            <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-medium">
+                              {getInitials(lead.firstName, lead.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-slate-900 hover:text-purple-600 transition-colors">
+                              {lead.firstName} {lead.lastName}
+                            </p>
+                            <p className="text-xs text-slate-500">{lead.email}</p>
                           </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-slate-600">
-                          {lead.companyName || '-'}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-slate-600">
-                          {formatCurrency(lead.estimatedValue)}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              'font-medium',
-                              statusStyles[lead.status]?.bg,
-                              statusStyles[lead.status]?.text
-                            )}
-                          >
-                            {lead.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden xl:table-cell text-slate-600">
-                          {lead.source?.replace('_', ' ')}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-slate-500 text-sm">
-                          {formatDate(lead.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between pt-4">
-                <p className="text-sm text-slate-500">
-                  Showing {leads.length} of {data?.leads?.pageInfo?.totalCount ?? 0} leads
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevPage}
-                    disabled={pageHistory.length <= 1}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextPage}
-                    disabled={!hasNextPage}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            </>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">
+                        {lead.companyName || '-'}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            'font-medium',
+                            statusStyles[lead.status]?.bg,
+                            statusStyles[lead.status]?.text
+                          )}
+                        >
+                          {lead.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-slate-600">
+                        {lead.source?.replace('_', ' ') || '-'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-500 text-sm">
+                        {formatDate(lead.createdAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
