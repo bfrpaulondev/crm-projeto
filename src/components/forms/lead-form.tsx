@@ -5,19 +5,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@apollo/client/react';
-import { CREATE_LEAD_MUTATION, UPDATE_LEAD_MUTATION } from '@/graphql/mutations/leads';
+import { CREATE_LEAD_MUTATION, QUALIFY_LEAD_MUTATION, DELETE_LEAD_MUTATION } from '@/graphql/mutations/leads';
 import { GET_LEADS } from '@/graphql/queries/leads';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Lead, LeadStatus } from '@/types';
+import { Lead } from '@/types';
 
 const leadSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -36,8 +28,6 @@ const leadSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   phone: z.string().optional(),
   companyName: z.string().optional(),
-  status: z.enum(['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED']).optional(),
-  notes: z.string().optional(),
 });
 
 type LeadFormData = z.infer<typeof leadSchema>;
@@ -49,17 +39,10 @@ interface LeadFormProps {
   onSuccess?: () => void;
 }
 
-const statusOptions: { value: LeadStatus; label: string }[] = [
-  { value: 'NEW', label: 'New' },
-  { value: 'CONTACTED', label: 'Contacted' },
-  { value: 'QUALIFIED', label: 'Qualified' },
-  { value: 'UNQUALIFIED', label: 'Unqualified' },
-  { value: 'CONVERTED', label: 'Converted' },
-];
-
 export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps) {
   const [error, setError] = useState<string | null>(null);
-  const isEditing = !!lead;
+  // Note: API does not have updateLead mutation, so we only support creation
+  const isEditing = false; // Always false since updateLead doesn't exist
 
   const [createLead, { loading: creating }] = useMutation(CREATE_LEAD_MUTATION, {
     refetchQueries: [{ query: GET_LEADS }],
@@ -73,65 +56,38 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
     },
   });
 
-  const [updateLead, { loading: updating }] = useMutation(UPDATE_LEAD_MUTATION, {
-    refetchQueries: [{ query: GET_LEADS }],
-    onCompleted: () => {
-      toast.success('Lead updated successfully');
-      onOpenChange(false);
-      onSuccess?.();
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const isLoading = creating || updating;
+  const isLoading = creating;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    setValue,
-    watch,
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
-      firstName: lead?.firstName || '',
-      lastName: lead?.lastName || '',
-      email: lead?.email || '',
-      phone: lead?.phone || '',
-      companyName: lead?.companyName || '',
-      status: lead?.status || 'NEW',
-      notes: lead?.notes || '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      companyName: '',
     },
   });
-
-  const currentStatus = watch('status');
 
   const onSubmit = async (data: LeadFormData) => {
     setError(null);
     
-    // Pass individual arguments instead of input object
-    const variables = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || null,
-      companyName: data.companyName || null,
-      status: data.status || 'NEW',
-      notes: data.notes || null,
-    };
-
-    if (isEditing && lead) {
-      await updateLead({
-        variables: { id: lead.id, ...variables },
-      });
-    } else {
-      await createLead({
-        variables,
-      });
-    }
+    // For creating - only send fields that createLead accepts
+    // createLead only accepts: firstName, lastName, email, phone, companyName
+    await createLead({
+      variables: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || null,
+        companyName: data.companyName || null,
+      },
+    });
   };
 
   const handleClose = () => {
@@ -144,9 +100,9 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Lead' : 'Add New Lead'}</DialogTitle>
+          <DialogTitle>Add New Lead</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update the lead information below.' : 'Fill in the details to create a new lead.'}
+            Fill in the details to create a new lead.
           </DialogDescription>
         </DialogHeader>
 
@@ -220,35 +176,6 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select
-              value={currentStatus}
-              onValueChange={(value: LeadStatus) => setValue('status', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              {...register('notes')}
-              placeholder="Additional notes about this lead..."
-              rows={3}
-            />
-          </div>
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
@@ -257,10 +184,10 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
+                  Creating...
                 </>
               ) : (
-                isEditing ? 'Update Lead' : 'Create Lead'
+                'Create Lead'
               )}
             </Button>
           </DialogFooter>

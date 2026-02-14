@@ -1,6 +1,10 @@
 import { gql } from '@apollo/client';
 
-// Simple leads query - matches deployed API
+// ==========================================
+// QUERIES THAT EXIST IN THE DEPLOYED API
+// ==========================================
+
+// Get all leads for the current tenant
 export const GET_LEADS = gql`
   query GetLeads {
     leads {
@@ -16,6 +20,7 @@ export const GET_LEADS = gql`
   }
 `;
 
+// Get a single lead by ID
 export const GET_LEAD = gql`
   query GetLead($id: String!) {
     lead(id: $id) {
@@ -26,37 +31,12 @@ export const GET_LEAD = gql`
       phone
       companyName
       status
-      notes
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
-// Simple opportunities query
-export const GET_OPPORTUNITIES = gql`
-  query GetOpportunities {
-    opportunities {
-      id
-      name
-      amount
-      stage
-      status
-      probability
-      expectedCloseDate
       createdAt
     }
   }
 `;
 
-// Stages for pipeline
-export const GET_STAGES = gql`
-  query GetStages {
-    stages {
-      id
-      name
-      order
-      probability
-    }
-  }
-`;
+// NOTE: The following queries DO NOT EXIST in the deployed API:
+// - opportunities (no Opportunity type)
+// - stages (no Stage type)
+// - pipeline (doesn't exist)
