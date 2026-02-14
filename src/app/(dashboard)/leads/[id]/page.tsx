@@ -123,11 +123,11 @@ export default function LeadDetailPage() {
   };
 
   const handleQualify = async () => {
-    await qualifyLead({ variables: { input: { leadId } } });
+    await qualifyLead({ variables: { id: leadId } });
   };
 
   const handleConvert = async () => {
-    await convertLead({ variables: { input: { leadId, createOpportunity: true } } });
+    await convertLead({ variables: { leadId, createOpportunity: true } });
   };
 
   return (
@@ -287,18 +287,6 @@ export default function LeadDetailPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Notes */}
-          {lead.notes && (
-            <Card className="bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600 whitespace-pre-wrap">{lead.notes}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Sidebar */}
@@ -317,15 +305,6 @@ export default function LeadDetailPage() {
                     <p className="text-xs text-slate-500">{formatDateTime(lead.createdAt)}</p>
                   </div>
                 </div>
-                {lead.updatedAt !== lead.createdAt && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-slate-400" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">Last Updated</p>
-                      <p className="text-xs text-slate-500">{formatDateTime(lead.updatedAt)}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

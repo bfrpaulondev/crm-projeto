@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@apollo/client/react';
-import { CREATE_LEAD_MUTATION, QUALIFY_LEAD_MUTATION, DELETE_LEAD_MUTATION } from '@/graphql/mutations/leads';
+import { CREATE_LEAD_MUTATION } from '@/graphql/mutations/leads';
 import { GET_LEADS } from '@/graphql/queries/leads';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
