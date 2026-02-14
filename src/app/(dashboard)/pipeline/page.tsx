@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
-import { GET_PIPELINE, GET_OPPORTUNITIES } from '@/graphql/queries/leads';
-import { CREATE_OPPORTUNITY_MUTATION } from '@/graphql/mutations/leads';
-import { PipelineBoard } from '@/components/dashboard/pipeline-board';
+import { GET_OPPORTUNITIES, GET_STAGES } from '@/graphql/queries/leads';
+import { CREATE_OPPORTUNITY_MUTATION, UPDATE_OPPORTUNITY_STAGE_MUTATION } from '@/graphql/mutations/leads';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -23,45 +24,86 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, GitBranch, Plus, AlertCircle } from 'lucide-react';
+import { Loader2, GitBranch, Plus, AlertCircle, DollarSign, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { OpportunityStage } from '@/types';
+import type { Opportunity } from '@/types';
 
-const stageOptions: { value: OpportunityStage; label: string }[] = [
-  { value: 'NEW', label: 'New' },
-  { value: 'CONTACTED', label: 'Contacted' },
-  { value: 'QUALIFIED', label: 'Qualified' },
-  { value: 'PROPOSAL', label: 'Proposal' },
-  { value: 'NEGOTIATION', label: 'Negotiation' },
-  { value: 'CLOSED_WON', label: 'Won' },
-  { value: 'CLOSED_LOST', label: 'Lost' },
-];
+const stageLabels: Record<string, string> = {
+  NEW: 'New',
+  CONTACTED: 'Contacted',
+  QUALIFIED: 'Qualified',
+  PROPOSAL: 'Proposal',
+  NEGOTIATION: 'Negotiation',
+  CLOSED_WON: 'Won',
+  CLOSED_LOST: 'Lost',
+};
+
+const stageColors: Record<string, string> = {
+  NEW: 'bg-blue-500',
+  CONTACTED: 'bg-amber-500',
+  QUALIFIED: 'bg-emerald-500',
+  PROPOSAL: 'bg-purple-500',
+  NEGOTIATION: 'bg-indigo-500',
+  CLOSED_WON: 'bg-green-500',
+  CLOSED_LOST: 'bg-red-500',
+};
 
 export default function PipelinePage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newOpportunity, setNewOpportunity] = useState({
     name: '',
-    value: '',
-    stage: 'NEW' as OpportunityStage,
+    amount: '',
+    stage: 'NEW',
     probability: 50,
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { data, loading, error, refetch } = useQuery(GET_PIPELINE, {
+  const { data: opportunitiesData, loading: opportunitiesLoading, error: opportunitiesError, refetch } = useQuery(GET_OPPORTUNITIES, {
+    variables: { first: 100 },
     fetchPolicy: 'cache-and-network',
   });
 
+  const { data: stagesData } = useQuery(GET_STAGES);
+
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION, {
-    refetchQueries: [{ query: GET_PIPELINE }, { query: GET_OPPORTUNITIES, variables: { first: 20 } }],
+    refetchQueries: [{ query: GET_OPPORTUNITIES, variables: { first: 100 } }],
     onCompleted: () => {
       toast.success('Opportunity created successfully');
       setShowCreateForm(false);
-      setNewOpportunity({ name: '', value: '', stage: 'NEW', probability: 50 });
+      setNewOpportunity({ name: '', amount: '', stage: 'NEW', probability: 50 });
     },
     onError: (err) => {
       setFormError(err.message);
     },
   });
+
+  const [updateStage, { loading: updatingStage }] = useMutation(UPDATE_OPPORTUNITY_STAGE_MUTATION, {
+    onCompleted: () => {
+      toast.success('Stage updated');
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const opportunities = useMemo(() => {
+    if (!opportunitiesData?.opportunities?.edges) return [];
+    return opportunitiesData.opportunities.edges.map((edge: { node: Opportunity }) => edge.node);
+  }, [opportunitiesData]);
+
+  const stages = useMemo(() => {
+    if (!stagesData?.stages) return Object.keys(stageLabels);
+    return stagesData.stages.map((s: { id: string; name: string }) => s.name);
+  }, [stagesData]);
+
+  const opportunitiesByStage = useMemo(() => {
+    const grouped: Record<string, Opportunity[]> = {};
+    stages.forEach((stage: string) => {
+      grouped[stage] = opportunities.filter((o: Opportunity) => o.stage === stage);
+    });
+    return grouped;
+  }, [opportunities, stages]);
 
   const handleCreateOpportunity = async () => {
     setFormError(null);
@@ -71,8 +113,8 @@ export default function PipelinePage() {
       return;
     }
     
-    if (!newOpportunity.value || parseFloat(newOpportunity.value) <= 0) {
-      setFormError('Please enter a valid value');
+    if (!newOpportunity.amount || parseFloat(newOpportunity.amount) <= 0) {
+      setFormError('Please enter a valid amount');
       return;
     }
 
@@ -80,7 +122,7 @@ export default function PipelinePage() {
       variables: {
         input: {
           name: newOpportunity.name.trim(),
-          value: parseFloat(newOpportunity.value),
+          amount: parseFloat(newOpportunity.amount),
           stage: newOpportunity.stage,
           probability: newOpportunity.probability,
         },
@@ -88,7 +130,13 @@ export default function PipelinePage() {
     });
   };
 
-  if (loading && !data) {
+  const handleStageChange = async (opportunityId: string, newStage: string) => {
+    await updateStage({
+      variables: { id: opportunityId, stage: newStage },
+    });
+  };
+
+  if (opportunitiesLoading && !opportunitiesData) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
@@ -96,7 +144,7 @@ export default function PipelinePage() {
     );
   }
 
-  if (error) {
+  if (opportunitiesError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-red-500">Failed to load pipeline</p>
@@ -127,21 +175,77 @@ export default function PipelinePage() {
       </div>
 
       {/* Pipeline Board */}
-      <div className="bg-slate-100 rounded-xl p-4">
-        {data?.pipeline && data.pipeline.length > 0 ? (
-          <PipelineBoard data={data.pipeline} onRefresh={() => refetch()} />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16">
-            <GitBranch className="w-16 h-16 text-slate-300 mb-4" />
-            <p className="text-slate-500 text-lg mb-2">No opportunities in pipeline</p>
-            <p className="text-slate-400 mb-4">Create your first opportunity to get started</p>
-            <Button onClick={() => setShowCreateForm(true)} className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Opportunity
-            </Button>
-          </div>
-        )}
+      <div className="overflow-x-auto">
+        <div className="flex gap-4 min-w-max pb-4">
+          {stages.map((stage: string) => (
+            <div key={stage} className="w-72 flex-shrink-0">
+              <div className="bg-slate-100 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`w-3 h-3 rounded-full ${stageColors[stage] || 'bg-slate-400'}`} />
+                  <h3 className="font-semibold text-slate-700">{stageLabels[stage] || stage}</h3>
+                  <Badge variant="secondary" className="ml-auto">
+                    {opportunitiesByStage[stage]?.length || 0}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {(opportunitiesByStage[stage] || []).map((opportunity: Opportunity) => (
+                    <Card key={opportunity.id} className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                      <CardContent className="p-3">
+                        <p className="font-medium text-slate-900 truncate">{opportunity.name}</p>
+                        <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
+                          <DollarSign className="w-3 h-3" />
+                          <span>{opportunity.amount?.toLocaleString() || 0}</span>
+                        </div>
+                        {opportunity.expectedCloseDate && (
+                          <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                            <Calendar className="w-3 h-3" />
+                            <span>{new Date(opportunity.expectedCloseDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <Select
+                            value={opportunity.stage || 'NEW'}
+                            onValueChange={(value) => handleStageChange(opportunity.id, value)}
+                            disabled={updatingStage}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stages.map((s: string) => (
+                                <SelectItem key={s} value={s}>
+                                  {stageLabels[s] || s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {(opportunitiesByStage[stage] || []).length === 0 && (
+                    <div className="text-center py-4 text-slate-400 text-sm">
+                      No opportunities
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {opportunities.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16">
+          <GitBranch className="w-16 h-16 text-slate-300 mb-4" />
+          <p className="text-slate-500 text-lg mb-2">No opportunities in pipeline</p>
+          <p className="text-slate-400 mb-4">Create your first opportunity to get started</p>
+          <Button onClick={() => setShowCreateForm(true)} className="bg-purple-600 hover:bg-purple-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Opportunity
+          </Button>
+        </div>
+      )}
 
       {/* Create Opportunity Modal */}
       <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
@@ -172,12 +276,12 @@ export default function PipelinePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="value">Value ($) *</Label>
+              <Label htmlFor="amount">Amount ($) *</Label>
               <Input
-                id="value"
+                id="amount"
                 type="number"
-                value={newOpportunity.value}
-                onChange={(e) => setNewOpportunity({ ...newOpportunity, value: e.target.value })}
+                value={newOpportunity.amount}
+                onChange={(e) => setNewOpportunity({ ...newOpportunity, amount: e.target.value })}
                 placeholder="50000"
                 min="0"
               />
@@ -187,17 +291,15 @@ export default function PipelinePage() {
               <Label htmlFor="stage">Stage</Label>
               <Select
                 value={newOpportunity.stage}
-                onValueChange={(value: OpportunityStage) =>
-                  setNewOpportunity({ ...newOpportunity, stage: value })
-                }
+                onValueChange={(value) => setNewOpportunity({ ...newOpportunity, stage: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stageOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {stages.map((stage: string) => (
+                    <SelectItem key={stage} value={stage}>
+                      {stageLabels[stage] || stage}
                     </SelectItem>
                   ))}
                 </SelectContent>

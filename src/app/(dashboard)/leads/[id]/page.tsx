@@ -314,15 +314,16 @@ export default function LeadDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Value Card */}
+          {/* Score Card */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Estimated Value</CardTitle>
+              <CardTitle className="text-lg font-semibold text-slate-900">Lead Score</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-slate-900">
-                {formatCurrency(lead.estimatedValue)}
+                {lead.score ?? 0}
               </p>
+              <p className="text-sm text-slate-500 mt-1">Quality score (0-100)</p>
             </CardContent>
           </Card>
 
@@ -333,31 +334,24 @@ export default function LeadDetailPage() {
             </CardHeader>
             <CardContent>
               <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-medium">
-                {sourceLabels[lead.source] || lead.source}
+                {sourceLabels[lead.source] || lead.source || 'Not set'}
               </Badge>
             </CardContent>
           </Card>
 
-          {/* Assigned To */}
-          {lead.assignedTo && (
+          {/* Tags */}
+          {lead.tags && lead.tags.length > 0 && (
             <Card className="bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Assigned To</CardTitle>
+                <CardTitle className="text-lg font-semibold text-slate-900">Tags</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 bg-purple-100">
-                    <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-medium">
-                      {getInitials(
-                        lead.assignedTo?.firstName || '',
-                        lead.assignedTo?.lastName || ''
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-slate-900">{lead.assignedTo?.firstName} {lead.assignedTo?.lastName}</p>
-                    <p className="text-xs text-slate-500">{lead.assignedTo?.email}</p>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {lead.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-slate-600">
+                      {tag}
+                    </Badge>
+                  ))}
                 </div>
               </CardContent>
             </Card>

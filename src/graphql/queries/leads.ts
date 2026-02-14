@@ -39,76 +39,42 @@ export const GET_LEAD = gql`
       email
       phone
       companyName
+      title
+      website
+      industry
       status
       source
-      estimatedValue
+      score
       notes
+      tags
       createdAt
       updatedAt
-      assignedTo {
-        id
-        firstName
-        lastName
-        email
-      }
     }
   }
 `;
 
-// Dashboard stats
-export const GET_DASHBOARD = gql`
-  query GetDashboard {
-    dashboard {
-      totalLeads
-      qualifiedLeads
-      convertedLeads
-      totalOpportunities
-      openOpportunities
-      totalPipelineValue
-      wonValue
-      lostValue
-    }
-  }
-`;
-
-// Pipeline with opportunities by stage
-export const GET_PIPELINE = gql`
-  query GetPipeline {
-    pipeline {
-      stage
-      opportunities {
-        id
-        name
-        value
-        stage
-        probability
-        expectedCloseDate
-        assignedTo {
-          id
-          firstName
-          lastName
-        }
-        lead {
-          id
-          firstName
-          lastName
-          company
-        }
-      }
-    }
-  }
-`;
-
-// Opportunities
+// Opportunities with pagination
 export const GET_OPPORTUNITIES = gql`
-  query GetOpportunities {
-    opportunities {
-      id
-      name
-      amount
-      status
-      probability
-      createdAt
+  query GetOpportunities($first: Int, $after: String, $filter: OpportunityFilterInput) {
+    opportunities(first: $first, after: $after, filter: $filter) {
+      edges {
+        node {
+          id
+          name
+          amount
+          stage
+          status
+          probability
+          expectedCloseDate
+          createdAt
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        totalCount
+      }
     }
   }
 `;
@@ -121,55 +87,6 @@ export const GET_STAGES = gql`
       name
       order
       probability
-    }
-  }
-`;
-
-// Accounts
-export const GET_ACCOUNTS = gql`
-  query GetAccounts {
-    accounts {
-      id
-      name
-      domain
-      website
-      createdAt
-    }
-  }
-`;
-
-// Contacts
-export const GET_CONTACTS = gql`
-  query GetContacts {
-    contacts {
-      id
-      firstName
-      lastName
-      email
-      createdAt
-    }
-  }
-`;
-
-// Lead conversion stats
-export const GET_LEAD_CONVERSION_STATS = gql`
-  query GetLeadConversionStats {
-    leadConversionStats {
-      source
-      total
-      converted
-      conversionRate
-    }
-  }
-`;
-
-// Activity stats
-export const GET_ACTIVITY_STATS = gql`
-  query GetActivityStats {
-    activityStats {
-      type
-      count
-      completed
     }
   }
 `;

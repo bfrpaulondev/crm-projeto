@@ -1,68 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { graphqlRequest } from '@/lib/graphql/client';
+import { useQuery } from '@apollo/client/react';
 import { useAuth } from '@/lib/auth/context';
+import { GET_LEADS } from '@/graphql/queries/leads';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { QuickActions } from '@/components/dashboard/quick-actions';
 import { Loader2, Users, DollarSign, Target, TrendingUp } from 'lucide-react';
-import type { DashboardStats, Lead } from '@/types';
-
-const DASHBOARD_QUERY = `
-  query GetDashboard {
-    dashboard {
-      totalLeads
-      qualifiedLeads
-      convertedLeads
-      totalOpportunities
-      openOpportunities
-      totalPipelineValue
-      wonValue
-      lostValue
-    }
-  }
-`;
-
-const LEADS_QUERY = `
-  query GetLeads {
-    leads {
-      id
-      firstName
-      lastName
-      email
-      companyName
-      status
-      createdAt
-    }
-  }
-`;
+import type { Lead } from '@/types';
 
 export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
-  const [dashboard, setDashboard] = useState<DashboardStats | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [dashData, leadsData] = await Promise.all([
-          graphqlRequest<{ dashboard: DashboardStats }>(DASHBOARD_QUERY),
-          graphqlRequest<{ leads: Lead[] }>(LEADS_QUERY),
-        ]);
-        
-        setDashboard(dashData.dashboard);
-        setLeads(leadsData.leads);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-      } finally {
-        setLoading(false);
-      }
-    }
+  const { data, loading, error } = useQuery(GET_LEADS, {
+    variables: { first: 100 },
+    fetchPolicy: 'cache-and-network',
+  });
 
-    fetchData();
-  }, []);
+  const leads = data?.leads?.edges?.map((edge: { node: Lead }) => edge.node) || [];
+  
+  const stats = {
+    totalLeads: leads.length,
+    newLeads: leads.filter((l: Lead) => l.status === 'NEW').length,
+    qualifiedLeads: leads.filter((l: Lead) => l.status === 'QUALIFIED').length,
+    convertedLeads: leads.filter((l: Lead) => l.status === 'CONVERTED').length,
+  };
 
   if (authLoading || loading) {
     return (
@@ -75,7 +36,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-500">{error.message}</p>
         <button
           onClick={() => window.location.reload()}
           className="text-purple-600 hover:text-purple-700 font-medium"
@@ -104,31 +65,27 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <MetricCard
           title="Total Leads"
-          value={dashboard?.totalLeads ?? 0}
+          value={stats.totalLeads}
           icon={Users}
           trend={{ value: 12, isPositive: true }}
         />
         <MetricCard
-          title="Open Opportunities"
-          value={dashboard?.openOpportunities ?? 0}
+          title="New Leads"
+          value={stats.newLeads}
           icon={Target}
           trend={{ value: 8, isPositive: true }}
         />
         <MetricCard
-          title="Pipeline Value"
-          value={dashboard?.totalPipelineValue ?? 0}
+          title="Qualified"
+          value={stats.qualifiedLeads}
           icon={DollarSign}
           trend={{ value: 15, isPositive: true }}
-          format="currency"
         />
         <MetricCard
-          title="Conversion Rate"
-          value={dashboard?.convertedLeads && dashboard?.totalLeads 
-            ? Math.round((dashboard.convertedLeads / dashboard.totalLeads) * 100) 
-            : 0}
+          title="Converted"
+          value={stats.convertedLeads}
           icon={TrendingUp}
           trend={{ value: 3, isPositive: true }}
-          format="percentage"
         />
       </div>
 
@@ -145,7 +102,7 @@ export default function DashboardPage() {
                 <p className="text-slate-500 text-center py-8">No leads yet. Create your first lead!</p>
               ) : (
                 <div className="space-y-4">
-                  {leads.slice(0, 5).map((lead) => (
+                  {leads.slice(0, 5).map((lead: Lead) => (
                     <div key={lead.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                       <div>
                         <p className="font-medium">{lead.firstName} {lead.lastName}</p>
