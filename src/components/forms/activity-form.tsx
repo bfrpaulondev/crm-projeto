@@ -270,17 +270,22 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
             <div className="space-y-2">
               <Label>Related Lead</Label>
               <Select
-                value={selectedLeadId || ''}
+                value={selectedLeadId || 'none'}
                 onValueChange={(value) => {
-                  setValue('relatedToId', value);
-                  setValue('relatedToType', value ? 'LEAD' : '');
+                  if (value === 'none') {
+                    setValue('relatedToId', '');
+                    setValue('relatedToType', '');
+                  } else {
+                    setValue('relatedToId', value);
+                    setValue('relatedToType', 'LEAD');
+                  }
                 }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a lead (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No lead selected</SelectItem>
+                  <SelectItem value="none">No lead selected</SelectItem>
                   {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.firstName} {lead.lastName} {lead.companyName ? `(${lead.companyName})` : ''}
