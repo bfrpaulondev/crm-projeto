@@ -22,12 +22,6 @@ export const GET_ACTIVITIES = gql`
         companyName
       }
       ownerId
-      owner {
-        id
-        firstName
-        lastName
-        email
-      }
       createdAt
       updatedAt
     }
@@ -56,12 +50,6 @@ export const GET_ACTIVITY = gql`
         companyName
       }
       ownerId
-      owner {
-        id
-        firstName
-        lastName
-        email
-      }
       createdAt
       updatedAt
     }
