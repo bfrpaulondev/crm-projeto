@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Lead } from '@/types';
 
@@ -47,7 +47,7 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
   const [createLead, { loading: creating }] = useMutation(CREATE_LEAD_MUTATION, {
     refetchQueries: [{ query: GET_LEADS }],
     onCompleted: () => {
-      toast.success('Lead created successfully');
+      toast.success('Lead criado com sucesso');
       onOpenChange(false);
       onSuccess?.();
     },
@@ -59,12 +59,17 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
   const [updateLead, { loading: updating }] = useMutation(UPDATE_LEAD_MUTATION, {
     refetchQueries: [{ query: GET_LEADS }],
     onCompleted: () => {
-      toast.success('Lead updated successfully');
+      toast.success('Lead atualizado com sucesso');
       onOpenChange(false);
       onSuccess?.();
     },
     onError: (err) => {
-      setError(err.message);
+      // If updateLead doesn't exist, show specific message
+      if (err.message.includes('Cannot query field "updateLead"')) {
+        setError('A mutation updateLead ainda não está disponível na API. Aguarde o deploy ou use Qualify/Convert para mudar o status.');
+      } else {
+        setError(err.message);
+      }
     },
   });
 
@@ -98,6 +103,7 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
     } else if (open) {
       reset();
     }
+    setError(null);
   }, [open, lead, setValue, reset]);
 
   const onSubmit = async (data: LeadFormData) => {
@@ -139,11 +145,11 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Lead' : 'Add New Lead'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Lead' : 'Novo Lead'}</DialogTitle>
           <DialogDescription>
             {isEditing 
-              ? 'Update the lead information below.'
-              : 'Fill in the details to create a new lead.'}
+              ? 'Atualize as informações do lead abaixo.'
+              : 'Preencha os dados para criar um novo lead.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -155,13 +161,22 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
             </Alert>
           )}
 
+          {isEditing && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700">
+                Para mudar o status do lead, use as ações "Qualificar" ou "Converter" na página do lead.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
+              <Label htmlFor="firstName">Nome *</Label>
               <Input
                 id="firstName"
                 {...register('firstName')}
-                placeholder="John"
+                placeholder="João"
                 className={errors.firstName ? 'border-red-500' : ''}
               />
               {errors.firstName && (
@@ -170,11 +185,11 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
+              <Label htmlFor="lastName">Sobrenome *</Label>
               <Input
                 id="lastName"
                 {...register('lastName')}
-                placeholder="Doe"
+                placeholder="Silva"
                 className={errors.lastName ? 'border-red-500' : ''}
               />
               {errors.lastName && (
@@ -189,7 +204,7 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
               id="email"
               type="email"
               {...register('email')}
-              placeholder="john@example.com"
+              placeholder="joao@exemplo.com"
               className={errors.email ? 'border-red-500' : ''}
             />
             {errors.email && (
@@ -199,36 +214,36 @@ export function LeadForm({ open, onOpenChange, lead, onSuccess }: LeadFormProps)
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
                 {...register('phone')}
-                placeholder="+1 (555) 000-0000"
+                placeholder="+55 (11) 99999-9999"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="companyName">Company</Label>
+              <Label htmlFor="companyName">Empresa</Label>
               <Input
                 id="companyName"
                 {...register('companyName')}
-                placeholder="Acme Inc."
+                placeholder="Empresa ABC"
               />
             </div>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isLoading} className="bg-purple-600 hover:bg-purple-700">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
+                  {isEditing ? 'Atualizando...' : 'Criando...'}
                 </>
               ) : (
-                isEditing ? 'Update Lead' : 'Create Lead'
+                isEditing ? 'Atualizar Lead' : 'Criar Lead'
               )}
             </Button>
           </DialogFooter>

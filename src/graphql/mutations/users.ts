@@ -1,6 +1,7 @@
 import { gql } from '@apollo/client';
 
 // Invite a new user to the tenant
+// NOTE: This mutation needs to be deployed to the API
 export const INVITE_USER_MUTATION = gql`
   mutation InviteUser(
     $email: String!
@@ -25,7 +26,7 @@ export const INVITE_USER_MUTATION = gql`
   }
 `;
 
-// Update a user
+// Update a user (this exists in the API)
 export const UPDATE_USER_MUTATION = gql`
   mutation UpdateUser(
     $id: String!
@@ -42,7 +43,7 @@ export const UPDATE_USER_MUTATION = gql`
   }
 `;
 
-// Delete a user
+// Delete a user (this exists in the API)
 export const DELETE_USER_MUTATION = gql`
   mutation DeleteUser($id: String!) {
     deleteUser(id: $id)

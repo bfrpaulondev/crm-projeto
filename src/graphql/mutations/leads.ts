@@ -1,11 +1,10 @@
 import { gql } from '@apollo/client';
 
 // ==========================================
-// MUTATIONS THAT EXIST IN THE DEPLOYED API
+// LEAD MUTATIONS
 // ==========================================
 
 // createLead: accepts firstName, lastName, email, phone, companyName
-// Returns: id, email, status
 export const CREATE_LEAD_MUTATION = gql`
   mutation CreateLead(
     $firstName: String!
@@ -28,8 +27,8 @@ export const CREATE_LEAD_MUTATION = gql`
   }
 `;
 
-// updateLead: accepts id, firstName, lastName, email, phone, companyName
-// Returns: id, firstName, lastName, email, status
+// NOTE: updateLead mutation needs to be deployed to the API
+// For now, editing will show a message that it's not available
 export const UPDATE_LEAD_MUTATION = gql`
   mutation UpdateLead(
     $id: String!
@@ -74,7 +73,6 @@ export const QUALIFY_LEAD_MUTATION = gql`
 `;
 
 // convertLead: accepts leadId and createOpportunity (optional)
-// Returns: leadId, contactId, accountId, opportunityId
 export const CONVERT_LEAD_MUTATION = gql`
   mutation ConvertLead($leadId: String!, $createOpportunity: Boolean) {
     convertLead(leadId: $leadId, createOpportunity: $createOpportunity) {
@@ -101,43 +99,3 @@ export const BULK_DELETE_LEADS_MUTATION = gql`
     }
   }
 `;
-
-// createWebhook: accepts name, url, events
-export const CREATE_WEBHOOK_MUTATION = gql`
-  mutation CreateWebhook($name: String!, $url: String!, $events: [String!]!) {
-    createWebhook(name: $name, url: $url, events: $events) {
-      id
-      name
-      url
-      isActive
-    }
-  }
-`;
-
-// deleteWebhook: accepts id, returns Boolean
-export const DELETE_WEBHOOK_MUTATION = gql`
-  mutation DeleteWebhook($id: String!) {
-    deleteWebhook(id: $id)
-  }
-`;
-
-// assignLead: accepts leadId and ownerId
-export const ASSIGN_LEAD_MUTATION = gql`
-  mutation AssignLead($leadId: String!, $ownerId: String!) {
-    assignLead(leadId: $leadId, ownerId: $ownerId) {
-      id
-      ownerId
-      owner {
-        id
-        firstName
-        lastName
-        email
-      }
-    }
-  }
-`;
-
-// NOTE: The following mutations DO NOT EXIST in the deployed API:
-// - updateLead (use qualifyLead or convertLead to change status)
-// - createOpportunity
-// - updateOpportunityStage

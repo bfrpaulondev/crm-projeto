@@ -43,23 +43,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, Plus, MoreVertical, Trash2, Shield, Crown, User, Eye, Mail, UserPlus, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, MoreVertical, Trash2, Shield, Crown, User, Eye, Mail, UserPlus, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils/formatters';
 import type { User as UserType, UserRole } from '@/types';
 
 const ROLE_STYLES: Record<UserRole, { badge: string; icon: React.ElementType; label: string }> = {
-  ADMIN: { badge: 'bg-purple-100 text-purple-700', icon: Crown, label: 'Administrator' },
-  MANAGER: { badge: 'bg-blue-100 text-blue-700', icon: Shield, label: 'Manager' },
-  SALES_REP: { badge: 'bg-green-100 text-green-700', icon: User, label: 'Sales Rep' },
-  READ_ONLY: { badge: 'bg-slate-100 text-slate-700', icon: Eye, label: 'Read Only' },
+  ADMIN: { badge: 'bg-purple-100 text-purple-700', icon: Crown, label: 'Administrador' },
+  MANAGER: { badge: 'bg-blue-100 text-blue-700', icon: Shield, label: 'Gerente' },
+  SALES_REP: { badge: 'bg-green-100 text-green-700', icon: User, label: 'Vendedor' },
+  READ_ONLY: { badge: 'bg-slate-100 text-slate-700', icon: Eye, label: 'Somente Leitura' },
 };
 
 const ROLES: { value: UserRole; label: string; description: string }[] = [
-  { value: 'ADMIN', label: 'Administrator', description: 'Full access to all features' },
-  { value: 'MANAGER', label: 'Manager', description: 'Manage team and leads' },
-  { value: 'SALES_REP', label: 'Sales Representative', description: 'Manage own leads' },
-  { value: 'READ_ONLY', label: 'Read Only', description: 'View only access' },
+  { value: 'ADMIN', label: 'Administrador', description: 'Acesso total a todas as funcionalidades' },
+  { value: 'MANAGER', label: 'Gerente', description: 'Gerencia equipe e leads' },
+  { value: 'SALES_REP', label: 'Vendedor', description: 'Gerencia seus próprios leads' },
+  { value: 'READ_ONLY', label: 'Somente Leitura', description: 'Apenas visualização' },
 ];
 
 export default function TeamPage() {
@@ -82,7 +82,7 @@ export default function TeamPage() {
   const [deleteUser, { loading: deleting }] = useMutation(DELETE_USER_MUTATION, {
     refetchQueries: [{ query: GET_USERS }],
     onCompleted: () => {
-      toast.success('User removed successfully');
+      toast.success('Usuário removido com sucesso');
       setDeleteDialogOpen(false);
       setUserToDelete(null);
     },
@@ -94,7 +94,7 @@ export default function TeamPage() {
   const [updateUser] = useMutation(UPDATE_USER_MUTATION, {
     refetchQueries: [{ query: GET_USERS }],
     onCompleted: () => {
-      toast.success('User role updated');
+      toast.success('Role do usuário atualizada');
     },
     onError: (err) => {
       toast.error(err.message);
@@ -104,13 +104,17 @@ export default function TeamPage() {
   const [inviteUser, { loading: inviting }] = useMutation(INVITE_USER_MUTATION, {
     refetchQueries: [{ query: GET_USERS }],
     onCompleted: () => {
-      toast.success('User invited successfully');
+      toast.success('Usuário convidado com sucesso');
       setIsInviteOpen(false);
       setInviteData({ email: '', firstName: '', lastName: '', role: 'SALES_REP' });
       setInviteError(null);
     },
     onError: (err) => {
-      setInviteError(err.message);
+      if (err.message.includes('Cannot query field "inviteUser"')) {
+        setInviteError('A mutation inviteUser ainda não está disponível na API. Aguarde o deploy ou contate o administrador.');
+      } else {
+        setInviteError(err.message);
+      }
     },
   });
 
@@ -130,7 +134,7 @@ export default function TeamPage() {
     setInviteError(null);
     
     if (!inviteData.email || !inviteData.firstName || !inviteData.lastName) {
-      setInviteError('All fields are required');
+      setInviteError('Todos os campos são obrigatórios');
       return;
     }
 
@@ -164,7 +168,7 @@ export default function TeamPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-red-500">{error.message}</p>
-        <Button onClick={() => refetch()}>Try again</Button>
+        <Button onClick={() => refetch()}>Tentar novamente</Button>
       </div>
     );
   }
@@ -174,13 +178,13 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Team</h1>
-          <p className="text-slate-600 mt-1">Manage your team members and their roles</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Equipe</h1>
+          <p className="text-slate-600 mt-1">Gerencie os membros da equipe e suas permissões</p>
         </div>
         {(currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER') && (
           <Button onClick={() => setIsInviteOpen(true)} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="h-4 w-4 mr-2" />
-            Invite Member
+            Convidar Membro
           </Button>
         )}
       </div>
@@ -190,7 +194,7 @@ export default function TeamPage() {
         <Card className="bg-white shadow-sm">
           <CardContent className="p-4">
             <p className="text-2xl font-bold">{users.length}</p>
-            <p className="text-xs text-slate-500">Total Members</p>
+            <p className="text-xs text-slate-500">Total de Membros</p>
           </CardContent>
         </Card>
         <Card className="bg-white shadow-sm">
@@ -198,7 +202,7 @@ export default function TeamPage() {
             <p className="text-2xl font-bold text-purple-600">
               {users.filter((u: UserType) => u.role === 'ADMIN').length}
             </p>
-            <p className="text-xs text-slate-500">Admins</p>
+            <p className="text-xs text-slate-500">Administradores</p>
           </CardContent>
         </Card>
         <Card className="bg-white shadow-sm">
@@ -206,7 +210,7 @@ export default function TeamPage() {
             <p className="text-2xl font-bold text-blue-600">
               {users.filter((u: UserType) => u.role === 'MANAGER').length}
             </p>
-            <p className="text-xs text-slate-500">Managers</p>
+            <p className="text-xs text-slate-500">Gerentes</p>
           </CardContent>
         </Card>
         <Card className="bg-white shadow-sm">
@@ -214,7 +218,7 @@ export default function TeamPage() {
             <p className="text-2xl font-bold text-green-600">
               {users.filter((u: UserType) => u.role === 'SALES_REP').length}
             </p>
-            <p className="text-xs text-slate-500">Sales Reps</p>
+            <p className="text-xs text-slate-500">Vendedores</p>
           </CardContent>
         </Card>
       </div>
@@ -222,20 +226,20 @@ export default function TeamPage() {
       {/* Team Members List */}
       <Card className="bg-white shadow-sm">
         <CardHeader>
-          <CardTitle>Team Members</CardTitle>
+          <CardTitle>Membros da Equipe</CardTitle>
           <CardDescription>
-            {users.length} member{users.length !== 1 ? 's' : ''} in your organization
+            {users.length} membro{users.length !== 1 ? 's' : ''} na sua organização
           </CardDescription>
         </CardHeader>
         <CardContent>
           {users.length === 0 ? (
             <div className="text-center py-8">
               <User className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No team members</h3>
-              <p className="text-slate-500 mb-4">Invite your first team member to get started</p>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhum membro na equipe</h3>
+              <p className="text-slate-500 mb-4">Convide o primeiro membro para começar</p>
               <Button onClick={() => setIsInviteOpen(true)} className="bg-purple-600 hover:bg-purple-700">
                 <Plus className="h-4 w-4 mr-2" />
-                Invite Member
+                Convidar Membro
               </Button>
             </div>
           ) : (
@@ -265,7 +269,7 @@ export default function TeamPage() {
                           </p>
                           {isCurrentUser && (
                             <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                              You
+                              Você
                             </Badge>
                           )}
                         </div>
@@ -290,19 +294,19 @@ export default function TeamPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'ADMIN')}>
                               <Crown className="w-4 h-4 mr-2" />
-                              Make Admin
+                              Tornar Admin
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'MANAGER')}>
                               <Shield className="w-4 h-4 mr-2" />
-                              Make Manager
+                              Tornar Gerente
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'SALES_REP')}>
                               <User className="w-4 h-4 mr-2" />
-                              Make Sales Rep
+                              Tornar Vendedor
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'READ_ONLY')}>
                               <Eye className="w-4 h-4 mr-2" />
-                              Make Read Only
+                              Somente Leitura
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -310,7 +314,7 @@ export default function TeamPage() {
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Remove User
+                              Remover Usuário
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -330,10 +334,10 @@ export default function TeamPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-purple-600" />
-              Invite Team Member
+              Convidar Membro
             </DialogTitle>
             <DialogDescription>
-              Add a new member to your team. They will receive login credentials.
+              Adicione um novo membro à equipe.
             </DialogDescription>
           </DialogHeader>
 
@@ -345,12 +349,19 @@ export default function TeamPage() {
               </div>
             )}
 
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                O novo membro receberá um email com as credenciais de acesso. A senha padrão será "TempPassword123!".
+              </p>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="invite-email">Email Address *</Label>
+              <Label htmlFor="invite-email">Email *</Label>
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="colleague@company.com"
+                placeholder="colega@empresa.com"
                 value={inviteData.email}
                 onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
               />
@@ -358,19 +369,19 @@ export default function TeamPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="invite-firstName">First Name *</Label>
+                <Label htmlFor="invite-firstName">Nome *</Label>
                 <Input
                   id="invite-firstName"
-                  placeholder="John"
+                  placeholder="João"
                   value={inviteData.firstName}
                   onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="invite-lastName">Last Name *</Label>
+                <Label htmlFor="invite-lastName">Sobrenome *</Label>
                 <Input
                   id="invite-lastName"
-                  placeholder="Doe"
+                  placeholder="Silva"
                   value={inviteData.lastName}
                   onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
                 />
@@ -384,7 +395,7 @@ export default function TeamPage() {
                 onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
+                  <SelectValue placeholder="Selecione um role" />
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((role) => (
@@ -404,7 +415,7 @@ export default function TeamPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsInviteOpen(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button 
               onClick={handleInvite} 
@@ -414,10 +425,10 @@ export default function TeamPage() {
               {inviting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Inviting...
+                  Convidando...
                 </>
               ) : (
-                'Send Invitation'
+                'Enviar Convite'
               )}
             </Button>
           </DialogFooter>
@@ -428,19 +439,19 @@ export default function TeamPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogTitle>Remover Membro</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {userToDelete?.firstName} {userToDelete?.lastName} from the team? They will lose access to all resources.
+              Tem certeza que deseja remover {userToDelete?.firstName} {userToDelete?.lastName} da equipe? Ele perderá acesso a todos os recursos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleting ? 'Removing...' : 'Remove'}
+              {deleting ? 'Removendo...' : 'Remover'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
