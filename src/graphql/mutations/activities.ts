@@ -21,15 +21,6 @@ export const CREATE_ACTIVITY_MUTATION = gql`
       relatedToId: $relatedToId
     ) {
       id
-      type
-      subject
-      description
-      status
-      priority
-      dueDate
-      relatedToType
-      relatedToId
-      createdAt
     }
   }
 `;
@@ -53,13 +44,6 @@ export const UPDATE_ACTIVITY_MUTATION = gql`
       dueDate: $dueDate
     ) {
       id
-      type
-      subject
-      description
-      status
-      priority
-      dueDate
-      updatedAt
     }
   }
 `;
@@ -76,8 +60,6 @@ export const COMPLETE_ACTIVITY_MUTATION = gql`
   mutation CompleteActivity($id: String!) {
     completeActivity(id: $id) {
       id
-      status
-      completedAt
     }
   }
 `;
