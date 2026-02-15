@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import { GET_USERS } from '@/graphql/queries/users';
-import { DELETE_USER_MUTATION, UPDATE_USER_MUTATION } from '@/graphql/mutations/users';
-import { InviteUserForm } from '@/components/forms/invite-user-form';
+import { DELETE_USER_MUTATION, UPDATE_USER_MUTATION, INVITE_USER_MUTATION } from '@/graphql/mutations/users';
 import { useAuth } from '@/lib/auth/context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +29,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, Plus, MoreVertical, Trash2, Shield, Crown, User, Eye, Mail } from 'lucide-react';
+import { Loader2, Plus, MoreVertical, Trash2, Shield, Crown, User, Eye, Mail, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/utils/formatters';
 import type { User as UserType, UserRole } from '@/types';
@@ -39,13 +55,27 @@ const ROLE_STYLES: Record<UserRole, { badge: string; icon: React.ElementType; la
   READ_ONLY: { badge: 'bg-slate-100 text-slate-700', icon: Eye, label: 'Read Only' },
 };
 
+const ROLES: { value: UserRole; label: string; description: string }[] = [
+  { value: 'ADMIN', label: 'Administrator', description: 'Full access to all features' },
+  { value: 'MANAGER', label: 'Manager', description: 'Manage team and leads' },
+  { value: 'SALES_REP', label: 'Sales Representative', description: 'Manage own leads' },
+  { value: 'READ_ONLY', label: 'Read Only', description: 'View only access' },
+];
+
 export default function TeamPage() {
   const { user: currentUser } = useAuth();
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserType | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteData, setInviteData] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'SALES_REP',
+  });
 
-  const { data, loading, error } = useQuery(GET_USERS, {
+  const { data, loading, error, refetch } = useQuery(GET_USERS, {
     fetchPolicy: 'cache-and-network',
   });
 
@@ -71,6 +101,19 @@ export default function TeamPage() {
     },
   });
 
+  const [inviteUser, { loading: inviting }] = useMutation(INVITE_USER_MUTATION, {
+    refetchQueries: [{ query: GET_USERS }],
+    onCompleted: () => {
+      toast.success('User invited successfully');
+      setIsInviteOpen(false);
+      setInviteData({ email: '', firstName: '', lastName: '', role: 'SALES_REP' });
+      setInviteError(null);
+    },
+    onError: (err) => {
+      setInviteError(err.message);
+    },
+  });
+
   const users = data?.users || [];
 
   const handleDelete = async () => {
@@ -81,6 +124,24 @@ export default function TeamPage() {
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     await updateUser({ variables: { id: userId, role: newRole } });
+  };
+
+  const handleInvite = async () => {
+    setInviteError(null);
+    
+    if (!inviteData.email || !inviteData.firstName || !inviteData.lastName) {
+      setInviteError('All fields are required');
+      return;
+    }
+
+    await inviteUser({
+      variables: {
+        email: inviteData.email,
+        firstName: inviteData.firstName,
+        lastName: inviteData.lastName,
+        role: inviteData.role,
+      },
+    });
   };
 
   const canManageUser = (targetUser: UserType) => {
@@ -103,7 +164,7 @@ export default function TeamPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-red-500">{error.message}</p>
-        <Button onClick={() => window.location.reload()}>Try again</Button>
+        <Button onClick={() => refetch()}>Try again</Button>
       </div>
     );
   }
@@ -180,7 +241,7 @@ export default function TeamPage() {
           ) : (
             <div className="space-y-3">
               {users.map((member: UserType) => {
-                const roleStyle = ROLE_STYLES[member.role];
+                const roleStyle = ROLE_STYLES[member.role] || ROLE_STYLES.SALES_REP;
                 const RoleIcon = roleStyle.icon;
                 const isCurrentUser = member.id === currentUser?.id;
 
@@ -264,7 +325,104 @@ export default function TeamPage() {
       </Card>
 
       {/* Invite User Dialog */}
-      <InviteUserForm open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-purple-600" />
+              Invite Team Member
+            </DialogTitle>
+            <DialogDescription>
+              Add a new member to your team. They will receive login credentials.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {inviteError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">{inviteError}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="colleague@company.com"
+                value={inviteData.email}
+                onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="invite-firstName">First Name *</Label>
+                <Input
+                  id="invite-firstName"
+                  placeholder="John"
+                  value={inviteData.firstName}
+                  onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invite-lastName">Last Name *</Label>
+                <Input
+                  id="invite-lastName"
+                  placeholder="Doe"
+                  value={inviteData.lastName}
+                  onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Role *</Label>
+              <Select
+                value={inviteData.role}
+                onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      <div className="flex flex-col">
+                        <span>{role.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {ROLES.find(r => r.value === inviteData.role)?.description}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInviteOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleInvite} 
+              disabled={inviting} 
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {inviting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Inviting...
+                </>
+              ) : (
+                'Send Invitation'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

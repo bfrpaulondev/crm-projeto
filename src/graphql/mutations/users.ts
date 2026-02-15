@@ -1,25 +1,26 @@
 import { gql } from '@apollo/client';
 
-// Invite a new user
+// Invite a new user to the tenant
 export const INVITE_USER_MUTATION = gql`
   mutation InviteUser(
     $email: String!
     $firstName: String!
     $lastName: String!
-    $role: UserRole!
+    $role: String!
+    $password: String
   ) {
     inviteUser(
       email: $email
       firstName: $firstName
       lastName: $lastName
       role: $role
+      password: $password
     ) {
       id
       email
       firstName
       lastName
       role
-      createdAt
     }
   }
 `;
@@ -30,20 +31,14 @@ export const UPDATE_USER_MUTATION = gql`
     $id: String!
     $firstName: String
     $lastName: String
-    $role: UserRole
+    $role: String
   ) {
     updateUser(
       id: $id
       firstName: $firstName
       lastName: $lastName
       role: $role
-    ) {
-      id
-      email
-      firstName
-      lastName
-      role
-    }
+    )
   }
 `;
 

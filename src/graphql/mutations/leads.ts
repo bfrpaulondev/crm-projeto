@@ -28,6 +28,34 @@ export const CREATE_LEAD_MUTATION = gql`
   }
 `;
 
+// updateLead: accepts id, firstName, lastName, email, phone, companyName
+// Returns: id, firstName, lastName, email, status
+export const UPDATE_LEAD_MUTATION = gql`
+  mutation UpdateLead(
+    $id: String!
+    $firstName: String
+    $lastName: String
+    $email: String
+    $phone: String
+    $companyName: String
+  ) {
+    updateLead(
+      id: $id
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      phone: $phone
+      companyName: $companyName
+    ) {
+      id
+      firstName
+      lastName
+      email
+      status
+    }
+  }
+`;
+
 // deleteLead: accepts id, returns Boolean
 export const DELETE_LEAD_MUTATION = gql`
   mutation DeleteLead($id: String!) {
