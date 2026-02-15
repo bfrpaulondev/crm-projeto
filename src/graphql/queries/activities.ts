@@ -12,7 +12,8 @@ export const GET_ACTIVITIES = gql`
       priority
       dueDate
       completedAt
-      leadId
+      relatedToType
+      relatedToId
       lead {
         id
         firstName
@@ -20,8 +21,8 @@ export const GET_ACTIVITIES = gql`
         email
         companyName
       }
-      assignedToId
-      assignedTo {
+      ownerId
+      owner {
         id
         firstName
         lastName
@@ -45,7 +46,8 @@ export const GET_ACTIVITY = gql`
       priority
       dueDate
       completedAt
-      leadId
+      relatedToType
+      relatedToId
       lead {
         id
         firstName
@@ -53,8 +55,8 @@ export const GET_ACTIVITY = gql`
         email
         companyName
       }
-      assignedToId
-      assignedTo {
+      ownerId
+      owner {
         id
         firstName
         lastName
@@ -62,46 +64,6 @@ export const GET_ACTIVITY = gql`
       }
       createdAt
       updatedAt
-    }
-  }
-`;
-
-// Get activities by lead ID
-export const GET_LEAD_ACTIVITIES = gql`
-  query GetLeadActivities($leadId: String!) {
-    activitiesByLead(leadId: $leadId) {
-      id
-      type
-      subject
-      description
-      status
-      priority
-      dueDate
-      completedAt
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
-// Get activities by date range (for calendar)
-export const GET_ACTIVITIES_BY_DATE_RANGE = gql`
-  query GetActivitiesByDateRange($startDate: DateTime!, $endDate: DateTime!) {
-    activitiesByDateRange(startDate: $startDate, endDate: $endDate) {
-      id
-      type
-      subject
-      description
-      status
-      priority
-      dueDate
-      leadId
-      lead {
-        id
-        firstName
-        lastName
-      }
-      createdAt
     }
   }
 `;

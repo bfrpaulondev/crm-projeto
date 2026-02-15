@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth/context';
-import { Bell, Search, Menu, Download } from 'lucide-react';
+import { Bell, Search, Menu, X, Check, AlertCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -13,18 +13,77 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { InstallPrompt } from '@/components/install-prompt';
 import { getInitials } from '@/lib/utils/formatters';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
+import { useState } from 'react';
 
 interface HeaderProps {
   onMenuClick?: () => void;
   showMenuButton?: boolean;
 }
 
+// Mock notifications - in a real app, these would come from the API
+const MOCK_NOTIFICATIONS = [
+  {
+    id: '1',
+    type: 'info',
+    title: 'Novo lead criado',
+    message: 'João Silva foi adicionado como novo lead',
+    time: '5 min atrás',
+    read: false,
+  },
+  {
+    id: '2',
+    type: 'success',
+    title: 'Lead qualificado',
+    message: 'Maria Santos foi qualificada com sucesso',
+    time: '1 hora atrás',
+    read: false,
+  },
+  {
+    id: '3',
+    type: 'alert',
+    title: 'Atividade pendente',
+    message: 'Você tem uma reunião agendada para hoje',
+    time: '2 horas atrás',
+    read: true,
+  },
+];
+
 export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
   const { user, logout } = useAuth();
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <Check className="h-4 w-4 text-green-500" />;
+      case 'alert':
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
@@ -63,17 +122,77 @@ export function Header({ onMenuClick, showMenuButton = false }: HeaderProps) {
           <ThemeToggle />
 
           {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            aria-label="Notificações"
-          >
-            <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                aria-label="Notificações"
+              >
+                <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h4 className="font-semibold">Notificações</h4>
+                {unreadCount > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={markAllAsRead}
+                    className="text-xs text-purple-600 hover:text-purple-700"
+                  >
+                    Marcar todas como lidas
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-64">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-slate-500">
+                    Nenhuma notificação
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${
+                          !notification.read ? 'bg-purple-50 dark:bg-purple-950/20' : ''
+                        }`}
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 mt-1">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{notification.title}</p>
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {notification.time}
+                            </p>
+                          </div>
+                          {!notification.read && (
+                            <div className="flex-shrink-0">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
 
           {/* User Menu */}
           <DropdownMenu>

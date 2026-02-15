@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,10 +34,10 @@ const activitySchema = z.object({
   type: z.enum(['CALL', 'EMAIL', 'MEETING', 'TASK', 'NOTE']),
   subject: z.string().min(1, 'Subject is required'),
   description: z.string().optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   dueDate: z.string().optional(),
-  leadId: z.string().optional(),
-  assignedToId: z.string().optional(),
+  relatedToType: z.string().optional(),
+  relatedToId: z.string().optional(),
 });
 
 type ActivityFormData = z.infer<typeof activitySchema>;
@@ -62,7 +62,6 @@ const PRIORITIES: { value: ActivityPriority; label: string; color: string }[] = 
   { value: 'LOW', label: 'Low', color: 'text-slate-600' },
   { value: 'MEDIUM', label: 'Medium', color: 'text-blue-600' },
   { value: 'HIGH', label: 'High', color: 'text-orange-600' },
-  { value: 'URGENT', label: 'Urgent', color: 'text-red-600' },
 ];
 
 export function ActivityForm({ open, onOpenChange, activity, leads = [], onSuccess }: ActivityFormProps) {
@@ -109,29 +108,50 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
       subject: activity?.subject || '',
       description: activity?.description || '',
       priority: activity?.priority || 'MEDIUM',
-      dueDate: activity?.dueDate ? activity.dueDate.slice(0, 16) : '',
-      leadId: activity?.leadId || '',
-      assignedToId: activity?.assignedToId || '',
+      dueDate: activity?.dueDate ? new Date(activity.dueDate).toISOString().slice(0, 16) : '',
+      relatedToType: activity?.relatedToType || '',
+      relatedToId: activity?.relatedToId || '',
     },
   });
 
+  // Reset form when activity changes
+  useEffect(() => {
+    if (open) {
+      reset({
+        type: activity?.type || 'TASK',
+        subject: activity?.subject || '',
+        description: activity?.description || '',
+        priority: activity?.priority || 'MEDIUM',
+        dueDate: activity?.dueDate ? new Date(activity.dueDate).toISOString().slice(0, 16) : '',
+        relatedToType: activity?.relatedToType || '',
+        relatedToId: activity?.relatedToId || '',
+      });
+    }
+  }, [open, activity, reset]);
+
   const onSubmit = async (data: ActivityFormData) => {
     setError(null);
+    
+    const variables = {
+      type: data.type,
+      subject: data.subject,
+      description: data.description || null,
+      priority: data.priority || 'MEDIUM',
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+      relatedToType: data.relatedToId ? 'LEAD' : null,
+      relatedToId: data.relatedToId || null,
+    };
     
     if (isEditing) {
       await updateActivity({
         variables: {
           id: activity.id,
-          ...data,
-          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+          ...variables,
         },
       });
     } else {
       await createActivity({
-        variables: {
-          ...data,
-          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-        },
+        variables,
       });
     }
   };
@@ -143,6 +163,7 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
   };
 
   const selectedType = watch('type');
+  const selectedLeadId = watch('relatedToId');
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -156,7 +177,7 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 dark:bg-red-950 dark:border-red-800 dark:text-red-400">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <p className="text-sm">{error}</p>
             </div>
@@ -175,8 +196,8 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
                     onClick={() => setValue('type', type.value)}
                     className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
                       selectedType === type.value
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -249,14 +270,17 @@ export function ActivityForm({ open, onOpenChange, activity, leads = [], onSucce
             <div className="space-y-2">
               <Label>Related Lead</Label>
               <Select
-                value={watch('leadId') || ''}
-                onValueChange={(value) => setValue('leadId', value)}
+                value={selectedLeadId || ''}
+                onValueChange={(value) => {
+                  setValue('relatedToId', value);
+                  setValue('relatedToType', value ? 'LEAD' : '');
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a lead" />
+                  <SelectValue placeholder="Select a lead (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No lead</SelectItem>
+                  <SelectItem value="">No lead selected</SelectItem>
                   {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.firstName} {lead.lastName} {lead.companyName ? `(${lead.companyName})` : ''}

@@ -3,13 +3,13 @@ import { gql } from '@apollo/client';
 // Create a new activity
 export const CREATE_ACTIVITY_MUTATION = gql`
   mutation CreateActivity(
-    $type: ActivityType!
+    $type: String!
     $subject: String!
     $description: String
-    $priority: ActivityPriority
-    $dueDate: DateTime
-    $leadId: String
-    $assignedToId: String
+    $priority: String
+    $dueDate: String
+    $relatedToType: String
+    $relatedToId: String
   ) {
     createActivity(
       type: $type
@@ -17,8 +17,8 @@ export const CREATE_ACTIVITY_MUTATION = gql`
       description: $description
       priority: $priority
       dueDate: $dueDate
-      leadId: $leadId
-      assignedToId: $assignedToId
+      relatedToType: $relatedToType
+      relatedToId: $relatedToId
     ) {
       id
       type
@@ -27,8 +27,8 @@ export const CREATE_ACTIVITY_MUTATION = gql`
       status
       priority
       dueDate
-      leadId
-      assignedToId
+      relatedToType
+      relatedToId
       createdAt
     }
   }
@@ -38,25 +38,19 @@ export const CREATE_ACTIVITY_MUTATION = gql`
 export const UPDATE_ACTIVITY_MUTATION = gql`
   mutation UpdateActivity(
     $id: String!
-    $type: ActivityType
     $subject: String
     $description: String
-    $status: ActivityStatus
-    $priority: ActivityPriority
-    $dueDate: DateTime
-    $leadId: String
-    $assignedToId: String
+    $status: String
+    $priority: String
+    $dueDate: String
   ) {
     updateActivity(
       id: $id
-      type: $type
       subject: $subject
       description: $description
       status: $status
       priority: $priority
       dueDate: $dueDate
-      leadId: $leadId
-      assignedToId: $assignedToId
     ) {
       id
       type
@@ -65,8 +59,6 @@ export const UPDATE_ACTIVITY_MUTATION = gql`
       status
       priority
       dueDate
-      leadId
-      assignedToId
       updatedAt
     }
   }
@@ -86,18 +78,6 @@ export const COMPLETE_ACTIVITY_MUTATION = gql`
       id
       status
       completedAt
-    }
-  }
-`;
-
-// Bulk update activity status
-export const BULK_UPDATE_ACTIVITY_STATUS_MUTATION = gql`
-  mutation BulkUpdateActivityStatus($ids: [String!]!, $status: ActivityStatus!) {
-    bulkUpdateActivityStatus(ids: $ids, status: $status) {
-      success
-      processedCount
-      successCount
-      failedCount
     }
   }
 `;
