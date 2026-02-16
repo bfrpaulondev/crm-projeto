@@ -9,7 +9,6 @@ export const GET_USERS = gql`
       firstName
       lastName
       role
-      createdAt
     }
   }
 `;
@@ -23,7 +22,6 @@ export const GET_USER = gql`
       firstName
       lastName
       role
-      createdAt
     }
   }
 `;
